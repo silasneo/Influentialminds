@@ -91,7 +91,7 @@ export default function Home() {
         <section className="hero" style={{ backgroundImage: `linear-gradient(90deg, rgba(10, 12, 15, .92) 0%, rgba(10, 12, 15, .64) 42%, rgba(10, 12, 15, .08) 100%), url(${heroImage})` }}>
           <div className="hero-inner">
             <div className="hero-copy">
-              <div className="hero-brand"><span><strong>...</strong><br /><small></small></span></div>
+              <div className="hero-brand"><span><strong></strong><br /><small></small></span></div>
               <p className="eyebrow">A conversation series with Dr. Lawrence E. Jones</p>
               <h1>Influential<br /><em>Minds</em></h1>
               <p className="hero-deck">Conversations with people who shape how we understand the world.</p>
