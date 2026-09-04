@@ -91,16 +91,16 @@ export default function Home() {
         <section className="hero" style={{ backgroundImage: `linear-gradient(90deg, rgba(10, 12, 15, .92) 0%, rgba(10, 12, 15, .64) 42%, rgba(10, 12, 15, .08) 100%), url(${heroImage})` }}>
           <div className="hero-inner">
             <div className="hero-copy">
-              <div className="hero-brand"><img src={mark} alt="" /><span><strong>Influential Minds</strong><small>Archive / 07</small></span></div>
+              <div className="hero-brand"><span><strong>...</strong><br /><small></small></span></div>
               <p className="eyebrow">A conversation series with Dr. Lawrence E. Jones</p>
               <h1>Influential<br /><em>Minds</em></h1>
               <p className="hero-deck">Conversations with people who shape how we understand the world.</p>
               <p className="hero-body">A global forum for leading thinkers, innovators, practitioners and experts exploring business, leadership, technology, energy, society and the forces shaping our future.</p>
               <div className="hero-ctas"><button className="button button--cobalt" onClick={() => scrollToId("conversations")}>Watch the conversations <ArrowDownRight size={17} /></button><button className="text-link text-link--light" onClick={() => scrollToId("ask")}>Ask the archive <ArrowUpRight size={16} /></button></div>
             </div>
-            <div className="hero-index" aria-label="Current season metadata"><span>07</span><div><b>Season</b><small>Global conversations<br />Ideas · People · Perspectives</small></div></div>
+            <div className="hero-index" aria-label="Current season metadata"><span></span><div><b></b><small>Global conversations<br />Ideas · People · Perspectives</small></div></div>
           </div>
-          <div className="hero-caption">The digital home for influential conversations, ideas and people.</div>
+          <div className="hero-caption">.</div>
         </section>
 
         <section className="feature-section section-paper" id="conversations">
@@ -127,7 +127,7 @@ export default function Home() {
 
         <section className="collections-section section-paper" id="collections"><div className="section-heading"><div><p className="section-kicker">07 / Curated pathways</p><h2>Follow a<br /><em>thread</em></h2></div><p className="section-intro">Start with a question, stay for the pattern. Editorial collections gather conversations around the challenges that keep returning.</p></div><div className="collection-grid"><button className="collection-card collection-card--dark"><span>Collection 01</span><strong>Mastering<br /><em>resilience</em></strong><small>5 conversations <ArrowUpRight size={14} /></small></button><button className="collection-card collection-card--blue"><span>Collection 02</span><strong>Building<br /><em>from zero</em></strong><small>8 conversations <ArrowUpRight size={14} /></small></button><button className="collection-card collection-card--paper"><span>Collection 03</span><strong>The future<br /><em>we inherit</em></strong><small>6 conversations <ArrowUpRight size={14} /></small></button></div></section>
 
-        <section className="join-section"><div><p className="section-kicker section-kicker--blue">08 / Keep exploring</p><h2>Keep a<br /><em>thread</em></h2></div><div><p>A quiet line into new conversations, useful moments and the paths connecting them—sent occasionally, never noisily.</p>{joined ? <p className="joined-message">You’re on the list. The next conversation will find you there.</p> : <form className="newsletter-form" onSubmit={submitNewsletter}><label htmlFor="email">Your email address</label><div><input id="email" type="email" required value={email} onChange={(event) => setEmail(event.target.value)} placeholder="you@example.com" /><button type="submit" className="button button--cobalt">Subscribe <ArrowUpRight size={15} /></button></div></form>}<small>By subscribing, you agree to receive Influential Minds updates. Unsubscribe anytime.</small></div></section>
+        <section className="join-section"><div><p className="section-kicker section-kicker--blue">08 / Keep exploring</p><h2>Get Updated<br /><em>first</em></h2></div><div><p>A quiet line into new conversations, useful moments and the paths connecting them—sent occasionally, never noisily.</p>{joined ? <p className="joined-message">You’re on the list. The next conversation will find you there.</p> : <form className="newsletter-form" onSubmit={submitNewsletter}><label htmlFor="email">Your email address</label><div><input id="email" type="email" required value={email} onChange={(event) => setEmail(event.target.value)} placeholder="you@example.com" /><button type="submit" className="button button--cobalt">Subscribe <ArrowUpRight size={15} /></button></div></form>}<small>By subscribing, you agree to receive Influential Minds updates. Unsubscribe anytime.</small></div></section>
       </main>
 
       <footer className="footer"><div className="footer-top"><button className="wordmark wordmark--footer" onClick={() => scrollToId("top")}><img src={mark} alt="" className="wordmark-mark" /><span><strong>INFLUENTIAL</strong><strong>MINDS</strong></span></button><p>A living index of people,<br />questions and moments.</p><button className="back-top" onClick={() => scrollToId("top")}>Back to top <ChevronDown size={15} /></button></div><div className="footer-bottom"><span>© 2026 Influential Minds Media</span><span>Ideas · People · Perspectives</span><span>Built for discovery</span></div></footer>
