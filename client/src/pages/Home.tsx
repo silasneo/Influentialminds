@@ -5,7 +5,7 @@ import { FormEvent, useEffect, useState } from "react";
 import { ArrowDownRight, ArrowUpRight, ChevronDown, Menu, Play, Search, X } from "lucide-react";
 
 const assetPath = (fileName: string) => `${import.meta.env.BASE_URL}assets/${fileName}`;
-const heroImage = assetPath("lawrence-jones-hero-wide.png");
+const heroImage = assetPath("DrLawrence.jpg");
 const conversationImage = assetPath("influential-minds-conversation.jpg");
 const peopleImage = assetPath("influential-minds-people.jpg");
 const archiveTexture = assetPath("influential-minds-archive-texture.jpg");
