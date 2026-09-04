@@ -33,6 +33,8 @@ const latestEpisodes = [
   { title: "Influential Minds: A Conversation with Rana Foroohar", guest: "Rana Foroohar", videoId: "cughCiJVw1E", duration: "46 min", topic: "Business", note: "Playlist 01", image: "https://i.ytimg.com/vi/cughCiJVw1E/hqdefault.jpg", playlistUrl: "https://www.youtube.com/watch?v=cughCiJVw1E&list=PLaqXzRqTnPvCncnQM6zvC2vafHKg9a_bV&index=1" },
 ];
 
+const featuredEpisode = { title: "Influential Minds: A Conversation with Rana Foroohar", guest: "Rana Foroohar", videoId: "cughCiJVw1E", duration: "46 min", topic: "Business", image: "https://i.ytimg.com/vi/cughCiJVw1E/hqdefault.jpg", playlistUrl: "https://www.youtube.com/watch?v=cughCiJVw1E&list=PLaqXzRqTnPvCncnQM6zvC2vafHKg9a_bV&index=1" };
+
 function scrollToId(id: string) {
   document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
 }
@@ -104,8 +106,8 @@ export default function Home() {
         <section className="feature-section section-paper" id="conversations">
           <div className="section-heading"><div><p className="section-kicker">01 / The archive</p><h2>The<br /><em>conversation</em></h2></div><p className="section-intro">A growing record of serious conversations—connected by the people in them and the ideas that stay useful long after the recording ends.</p></div>
           <article className="feature-story">
-            <div className="feature-image-wrap"><img src={conversationImage} alt="Two people in a quiet studio conversation" className="feature-image" /><button className="play-button" aria-label="Play featured conversation"><Play size={21} fill="currentColor" /></button><span className="image-note">Featured conversation / 07.04</span></div>
-            <div className="feature-copy"><p className="editorial-label">Featured conversation</p><h3>Homecoming: <br /><em>The Path to Prosperity in a Post-Global World</em></h3><p className="guest-line">With <strong>Rana Foroohar</strong><br />Hosted by Dr. Lawrence E. Jones</p><p className="feature-description">A clear-eyed conversation about the forces remaking prosperity, power and the meaning of home in a changing global economy.</p><div className="story-meta"><span>Business</span><span>54 min</span><span>Season 07 · Episode 04</span></div><button className="text-link" onClick={() => alert("YouTube viewing will connect here in the live archive.")}>Watch on YouTube <ArrowUpRight size={16} /></button></div>
+            <div className="feature-image-wrap"><a className="feature-video-link" href={featuredEpisode.playlistUrl} target="_blank" rel="noreferrer" aria-label={`Watch ${featuredEpisode.title} on YouTube`}><img src={featuredEpisode.image} alt={`YouTube thumbnail for ${featuredEpisode.title}`} className="feature-image" /><span className="play-button" aria-hidden="true"><Play size={21} fill="currentColor" /></span><span className="image-note">Featured conversation / YouTube playlist 01</span></a></div>
+            <div className="feature-copy"><p className="editorial-label">Featured conversation / verified playlist entry</p><h3>A conversation<br /><em>with {featuredEpisode.guest}</em></h3><p className="guest-line">Hosted by Dr. Lawrence E. Jones<br />From the Influential Minds YouTube archive</p><p className="feature-description">{featuredEpisode.title}. Trace the conversation from the guest’s perspective into the wider archive of ideas, people and related moments.</p><div className="story-meta"><span>{featuredEpisode.topic}</span><span>{featuredEpisode.duration}</span><span>Playlist 01</span></div><a className="text-link" href={featuredEpisode.playlistUrl} target="_blank" rel="noreferrer">Watch on YouTube <ArrowUpRight size={16} /></a></div>
           </article>
         </section>
 
