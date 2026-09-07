@@ -9,7 +9,7 @@ const heroImage = assetPath("DrLawrence.jpg");
 const conversationImage = assetPath("influential-minds-conversation.jpg");
 const peopleImage = assetPath("influential-minds-people.jpg");
 const archiveTexture = assetPath("influential-minds-archive-texture.jpg");
-const mark = assetPath("influential-minds-mark.png");
+const mark = assetPath("logo-small.png");
 
 const suggestedQuestions = [
   "What does it take to build through uncertainty?",
