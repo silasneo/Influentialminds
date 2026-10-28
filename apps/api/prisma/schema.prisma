@@ -1,0 +1,403 @@
+// Influential Minds — relational model for the MVP content platform.
+// Provider is MySQL per the Statement of Work. Migrations live in ./migrations.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+enum EditorialStatus {
+  DRAFT
+  IN_REVIEW
+  PUBLISHED
+  ARCHIVED
+}
+
+enum AdminRole {
+  SUPER_ADMIN
+  CONTENT_EDITOR
+}
+
+enum AccountStatus {
+  ACTIVE
+  DISABLED
+}
+
+enum TranscriptStatus {
+  PENDING
+  PROCESSING
+  READY
+  FAILED
+}
+
+enum MediaKind {
+  IMAGE
+  DOCUMENT
+  TRANSCRIPT
+}
+
+enum AskTier {
+  ANONYMOUS
+  REGISTERED
+  SUBSCRIBER
+}
+
+model AdminUser {
+  id           String        @id @default(cuid())
+  email        String        @unique @db.VarChar(254)
+  name         String        @db.VarChar(160)
+  passwordHash String        @db.VarChar(255)
+  role         AdminRole     @default(CONTENT_EDITOR)
+  status       AccountStatus @default(ACTIVE)
+  lastLoginAt  DateTime?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  auditLogs AuditLog[]
+
+  @@map("admin_users")
+}
+
+/// Registered front-of-site account. Used for the 10-query/day Ask tier.
+model SiteUser {
+  id           String        @id @default(cuid())
+  email        String        @unique @db.VarChar(254)
+  name         String?       @db.VarChar(160)
+  passwordHash String        @db.VarChar(255)
+  tier         AskTier       @default(REGISTERED)
+  status       AccountStatus @default(ACTIVE)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  @@map("site_users")
+}
+
+/// Singleton row holding editable brand, hero and host copy.
+model SiteSetting {
+  id                 String   @id @default("default")
+  siteTitle          String   @db.VarChar(160)
+  tagline            String   @db.VarChar(240)
+  heroEyebrow        String   @db.VarChar(240)
+  heroDeck           String   @db.Text
+  heroBody           String   @db.Text
+  heroImageUrl       String   @db.VarChar(1024)
+  hostName           String   @db.VarChar(160)
+  hostRole           String   @db.VarChar(200)
+  hostPortraitUrl    String   @db.VarChar(1024)
+  hostBio            String   @db.Text
+  hostQuote          String?  @db.Text
+  hostLongBio        String?  @db.LongText
+  youtubePlaylistUrl String?  @db.VarChar(1024)
+  newsletterHeading  String   @db.VarChar(240)
+  newsletterBody     String   @db.Text
+  metaDescription    String   @db.VarChar(400)
+  askSuggestions     Json
+  updatedAt          DateTime @updatedAt
+
+  @@map("site_settings")
+}
+
+model Episode {
+  id                String          @id @default(cuid())
+  slug              String          @unique @db.VarChar(160)
+  title             String          @db.VarChar(240)
+  episodeNumber     Int?
+  season            Int?
+  description       String?         @db.Text
+  summary           String?         @db.LongText
+  publishedAt       DateTime?
+  durationSeconds   Int?
+  status            EditorialStatus @default(DRAFT)
+  youtubeVideoId    String          @db.VarChar(20)
+  youtubeUrl        String          @db.VarChar(1024)
+  youtubePlaylistId String?         @db.VarChar(64)
+  thumbnailUrl      String          @db.VarChar(1024)
+  spotifyUrl        String?         @db.VarChar(1024)
+  applePodcastsUrl  String?         @db.VarChar(1024)
+  /// Array of { languageCode, languageName, kind } flagged by the editor.
+  lipsyncTracks     Json
+  seoTitle          String?         @db.VarChar(240)
+  seoDescription    String?         @db.VarChar(400)
+  ogImageUrl        String?         @db.VarChar(1024)
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+
+  guests      EpisodeGuest[]
+  topics      EpisodeTopic[]
+  collections CollectionEpisode[]
+  takeaways   Takeaway[]
+  quotes      Quote[]
+  transcripts Transcript[]
+  leads       Lead[]
+
+  @@index([status, publishedAt])
+  @@index([youtubeVideoId])
+  @@map("episodes")
+}
+
+model Guest {
+  id             String          @id @default(cuid())
+  slug           String          @unique @db.VarChar(160)
+  name           String          @db.VarChar(160)
+  role           String?         @db.VarChar(160)
+  company        String?         @db.VarChar(160)
+  bio            String?         @db.LongText
+  headshotUrl    String?         @db.VarChar(1024)
+  websiteUrl     String?         @db.VarChar(1024)
+  /// Array of strings.
+  expertise      Json
+  /// Object keyed by network name.
+  socialLinks    Json
+  status         EditorialStatus @default(DRAFT)
+  seoTitle       String?         @db.VarChar(240)
+  seoDescription String?         @db.VarChar(400)
+  ogImageUrl     String?         @db.VarChar(1024)
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  episodes EpisodeGuest[]
+
+  @@index([status])
+  @@map("guests")
+}
+
+model Topic {
+  id             String   @id @default(cuid())
+  slug           String   @unique @db.VarChar(160)
+  name           String   @db.VarChar(120)
+  description    String?  @db.Text
+  imageUrl       String?  @db.VarChar(1024)
+  featured       Boolean  @default(false)
+  sortOrder      Int      @default(0)
+  seoTitle       String?  @db.VarChar(240)
+  seoDescription String?  @db.VarChar(400)
+  ogImageUrl     String?  @db.VarChar(1024)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  episodes EpisodeTopic[]
+
+  @@index([featured, sortOrder])
+  @@map("topics")
+}
+
+model Collection {
+  id             String   @id @default(cuid())
+  slug           String   @unique @db.VarChar(160)
+  title          String   @db.VarChar(160)
+  description    String?  @db.Text
+  curatorNote    String?  @db.Text
+  coverUrl       String?  @db.VarChar(1024)
+  featured       Boolean  @default(false)
+  sortOrder      Int      @default(0)
+  seoTitle       String?  @db.VarChar(240)
+  seoDescription String?  @db.VarChar(400)
+  ogImageUrl     String?  @db.VarChar(1024)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  episodes CollectionEpisode[]
+
+  @@index([featured, sortOrder])
+  @@map("collections")
+}
+
+model EpisodeGuest {
+  episodeId String
+  guestId   String
+  sortOrder Int    @default(0)
+
+  episode Episode @relation(fields: [episodeId], references: [id], onDelete: Cascade)
+  guest   Guest   @relation(fields: [guestId], references: [id], onDelete: Cascade)
+
+  @@id([episodeId, guestId])
+  @@index([guestId])
+  @@map("episode_guests")
+}
+
+model EpisodeTopic {
+  episodeId String
+  topicId   String
+
+  episode Episode @relation(fields: [episodeId], references: [id], onDelete: Cascade)
+  topic   Topic   @relation(fields: [topicId], references: [id], onDelete: Cascade)
+
+  @@id([episodeId, topicId])
+  @@index([topicId])
+  @@map("episode_topics")
+}
+
+model CollectionEpisode {
+  collectionId String
+  episodeId    String
+  sortOrder    Int    @default(0)
+
+  collection Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  episode    Episode    @relation(fields: [episodeId], references: [id], onDelete: Cascade)
+
+  @@id([collectionId, episodeId])
+  @@index([episodeId])
+  @@map("collection_episodes")
+}
+
+model Takeaway {
+  id        String @id @default(cuid())
+  episodeId String
+  text      String @db.Text
+  sortOrder Int    @default(0)
+
+  episode Episode @relation(fields: [episodeId], references: [id], onDelete: Cascade)
+
+  @@index([episodeId, sortOrder])
+  @@map("takeaways")
+}
+
+model Quote {
+  id               String  @id @default(cuid())
+  episodeId        String
+  text             String  @db.Text
+  attribution      String? @db.VarChar(160)
+  timestampSeconds Int?
+  sortOrder        Int     @default(0)
+
+  episode Episode @relation(fields: [episodeId], references: [id], onDelete: Cascade)
+
+  @@index([episodeId, sortOrder])
+  @@map("quotes")
+}
+
+model Transcript {
+  id             String           @id @default(cuid())
+  episodeId      String
+  language       String           @default("en") @db.VarChar(12)
+  sourceFileName String?          @db.VarChar(260)
+  status         TranscriptStatus @default(PENDING)
+  indexedAt      DateTime?
+  errorMessage   String?          @db.Text
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  episode  Episode             @relation(fields: [episodeId], references: [id], onDelete: Cascade)
+  segments TranscriptSegment[]
+
+  @@unique([episodeId, language])
+  @@map("transcripts")
+}
+
+model TranscriptSegment {
+  id           String  @id @default(cuid())
+  transcriptId String
+  startSeconds Int
+  endSeconds   Int?
+  speaker      String? @db.VarChar(120)
+  text         String  @db.Text
+  sortOrder    Int     @default(0)
+
+  transcript Transcript @relation(fields: [transcriptId], references: [id], onDelete: Cascade)
+
+  @@index([transcriptId, startSeconds])
+  @@map("transcript_segments")
+}
+
+model LeadMagnet {
+  id          String   @id @default(cuid())
+  title       String   @db.VarChar(200)
+  description String?  @db.Text
+  coverUrl    String?  @db.VarChar(1024)
+  fileUrl     String?  @db.VarChar(1024)
+  fileName    String?  @db.VarChar(260)
+  active      Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  leads Lead[]
+
+  @@index([active])
+  @@map("lead_magnets")
+}
+
+model Lead {
+  id           String   @id @default(cuid())
+  name         String   @db.VarChar(160)
+  email        String   @db.VarChar(254)
+  consent      Boolean  @default(false)
+  sourcePage   String?  @db.VarChar(512)
+  leadMagnetId String?
+  episodeId    String?
+  ipHash       String?  @db.VarChar(64)
+  createdAt    DateTime @default(now())
+
+  leadMagnet LeadMagnet? @relation(fields: [leadMagnetId], references: [id], onDelete: SetNull)
+  episode    Episode?    @relation(fields: [episodeId], references: [id], onDelete: SetNull)
+
+  @@unique([email, leadMagnetId])
+  @@index([createdAt])
+  @@map("leads")
+}
+
+model MediaAsset {
+  id         String    @id @default(cuid())
+  fileName   String    @db.VarChar(260)
+  storageKey String    @unique @db.VarChar(512)
+  url        String    @db.VarChar(1024)
+  mimeType   String    @db.VarChar(160)
+  sizeBytes  Int
+  kind       MediaKind @default(IMAGE)
+  alt        String?   @db.VarChar(400)
+  createdAt  DateTime  @default(now())
+
+  @@index([kind, createdAt])
+  @@map("media_assets")
+}
+
+/// Daily bucket used to enforce Ask the Archive entitlements server-side.
+model AIQueryUsage {
+  id          String   @id @default(cuid())
+  /// SHA-256 of the client IP for anonymous visitors, or `user:<id>` for accounts.
+  subjectKey  String   @db.VarChar(80)
+  tier        AskTier  @default(ANONYMOUS)
+  dayBucket   String   @db.VarChar(10)
+  queryCount  Int      @default(0)
+  lastQueryAt DateTime @default(now())
+
+  @@unique([subjectKey, dayBucket])
+  @@index([dayBucket])
+  @@map("ai_query_usage")
+}
+
+/// Privacy-minimised audit of archive questions. No IP or email is stored.
+model AIQueryLog {
+  id           String   @id @default(cuid())
+  questionHash String   @db.VarChar(64)
+  question     String?  @db.Text
+  tier         AskTier  @default(ANONYMOUS)
+  episodeId    String?
+  resultCount  Int      @default(0)
+  noMatch      Boolean  @default(false)
+  latencyMs    Int      @default(0)
+  provider     String   @db.VarChar(80)
+  createdAt    DateTime @default(now())
+
+  @@index([createdAt])
+  @@map("ai_query_logs")
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  actorId    String?
+  actorEmail String?  @db.VarChar(254)
+  action     String   @db.VarChar(80)
+  entity     String   @db.VarChar(80)
+  entityId   String?  @db.VarChar(80)
+  summary    String?  @db.Text
+  createdAt  DateTime @default(now())
+
+  actor AdminUser? @relation(fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([createdAt])
+  @@map("audit_logs")
+}

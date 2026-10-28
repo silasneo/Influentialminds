@@ -1,10 +1,30 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build output
+dist/
+build/
+.next/
+out/
+*.tsbuildinfo
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Uploaded media / generated artefacts (served from apps/api/storage in local dev)
+apps/api/storage/
+!apps/api/storage/.gitkeep
+
+# Logs
+*.log
+npm-debug.log*
+.manus-logs/
+
+# Editor / OS
 .DS_Store
 Thumbs.db
-.env
-.env.*
-!.env.example
-*.log
 .idea/
 .vscode/
-node_modules/
-dist/
