@@ -14,6 +14,12 @@ pnpm build      # contracts, API, web
 
 All four must pass with no errors. CI runs the same commands, plus a migrations job that applies the committed migrations to a real MySQL 8 instance and asserts they still reproduce `schema.prisma`.
 
+Three failure modes survive all four commands and only appear once the app is actually served, so the Docker preview (`docker compose up -d --build`) is part of the checklist, not an optional extra:
+
+- A Nest module exporting a token it does not provide aborts bootstrap. `apps/api/test/module-graph.spec.ts` guards this.
+- A root `loading.tsx` converts every `notFound()` into a soft 404.
+- A server component importing a **value** — not a component — from a `"use client"` module receives a client reference proxy and fails at request time with `x.map is not a function`. Shared constants belong in a plain module such as `apps/web/src/lib/navigation.ts`.
+
 ## Content
 
 - [ ] Every published conversation has a title, summary, YouTube URL, duration and at least one topic.
@@ -30,7 +36,8 @@ All four must pass with no errors. CI runs the same commands, plus a migrations 
 - [ ] An episode page shows the embed, summary, takeaways, guests, topics and related conversations.
 - [ ] The YouTube embed plays, and transcript moment links open at the right timestamp.
 - [ ] Guest, topic and collection pages list only published conversations.
-- [ ] A bad slug returns the 404 page, not a crash or an empty shell.
+- [ ] A bad slug returns **HTTP 404**, not a 200 with the 404 page drawn inside it. Check the status code, not just the rendering: `curl -o /dev/null -w "%{http_code}" https://site/episodes/does-not-exist`. A `loading.tsx` at the route's root flushes a 200 shell before `notFound()` can set the status, which turns every miss into a soft 404.
+- [ ] Each page's HTML contains its real content. A 200 alone proves nothing when a Suspense fallback can be served in place of a failed render — grep the response for copy you expect.
 - [ ] The newsletter form accepts a valid submission, rejects a missing consent box, and handles a repeat email without an error.
 - [ ] The lead magnet download link works.
 

@@ -193,16 +193,20 @@ export class AskService {
     ]);
 
     return [
-      ...topics.map((topic): AskSuggestion => ({
-        label: topic.name,
-        href: `/topics/${topic.slug}`,
-        kind: "topic",
-      })),
-      ...episodes.map((episode): AskSuggestion => ({
-        label: episode.title,
-        href: `/episodes/${episode.slug}`,
-        kind: "episode",
-      })),
+      ...topics.map(
+        (topic): AskSuggestion => ({
+          label: topic.name,
+          href: `/topics/${topic.slug}`,
+          kind: "topic",
+        })
+      ),
+      ...episodes.map(
+        (episode): AskSuggestion => ({
+          label: episode.title,
+          href: `/episodes/${episode.slug}`,
+          kind: "episode",
+        })
+      ),
     ];
   }
 

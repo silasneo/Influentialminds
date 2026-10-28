@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { ArrowUp } from "lucide-react";
-import { PRIMARY_NAV } from "./SiteHeader";
+import { PRIMARY_NAV } from "@/lib/navigation";
 
 interface SiteFooterProps {
   siteTitle: string;

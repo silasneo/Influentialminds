@@ -38,11 +38,9 @@ export const leadSubmissionSchema = z.object({
     .toLowerCase()
     .email("Please enter a valid email address")
     .max(254),
-  consent: z
-    .boolean()
-    .refine(value => value, {
-      message: "Consent is required to receive the download",
-    }),
+  consent: z.boolean().refine(value => value, {
+    message: "Consent is required to receive the download",
+  }),
   sourcePage: z.string().max(512).optional(),
   /** Honeypot field; a non-empty value is treated as a bot submission. */
   company: z.string().max(200).optional(),

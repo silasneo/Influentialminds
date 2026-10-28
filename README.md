@@ -15,7 +15,8 @@ influential-minds/
 │  └─ web/        Next.js 15 App Router — public site + editorial console
 ├─ packages/
 │  └─ contracts/  Shared Zod schemas, response types, YouTube/timecode helpers
-└─ docs/          Deployment, API reference, admin and QA guides
+├─ docs/          Deployment, API reference, admin and QA guides
+└─ legacy/        The original HTML prototype, kept for reference only
 ```
 
 ```mermaid
@@ -45,6 +46,27 @@ The two apps deploy independently and share nothing but `@influential-minds/cont
 ---
 
 ## Quick start
+
+### With Docker (nothing to install but Docker)
+
+```bash
+docker compose up --build
+```
+
+That starts MySQL, applies the migrations, seeds verified content and the first
+admin user, then runs both apps:
+
+- Web: <http://localhost:3000>
+- API: <http://localhost:4000/api/v1>
+- Console: <http://localhost:3000/admin> — `admin@influentialminds.local` / `ChangeMe123!`
+
+MySQL is exposed on host port **3307** so an existing local MySQL is not
+disturbed. `docker compose down -v` discards the database and uploaded media.
+The credentials in `docker-compose.yml` are development defaults only.
+
+### Without Docker
+
+Requires a MySQL 8 instance you can reach.
 
 ```bash
 corepack enable

@@ -9,10 +9,9 @@ import type { ZodType } from "zod";
  * Validates request payloads against the shared zod contracts so the API and
  * the frontend can never drift apart.
  */
-export class ZodValidationPipe<TOutput> implements PipeTransform<
-  unknown,
-  TOutput
-> {
+export class ZodValidationPipe<TOutput>
+  implements PipeTransform<unknown, TOutput>
+{
   constructor(private readonly schema: ZodType<TOutput>) {}
 
   transform(value: unknown, _metadata: ArgumentMetadata): TOutput {

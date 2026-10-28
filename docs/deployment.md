@@ -4,6 +4,31 @@ The API and the web app deploy separately. The API needs a persistent filesystem
 
 ---
 
+## 0. Local preview with Docker
+
+`docker-compose.yml` runs the whole stack — MySQL, the API and the site — with one command:
+
+```bash
+docker compose up --build
+```
+
+The API container applies the migrations and runs the seed before starting, so a fresh volume comes up with renderable content and a working admin account. The site is on <http://localhost:3000>, the API on <http://localhost:4000/api/v1>, and MySQL on host port **3307** so it cannot collide with a local installation.
+
+```bash
+docker compose logs -f api     # follow the API
+docker compose down            # stop, keeping the database and media
+docker compose down -v         # stop and discard both volumes
+```
+
+Two things about this file are worth understanding before copying it to a server:
+
+- The secrets in it are fixed development values. A deployed environment needs its own `AUTH_SECRET`, `IP_HASH_SALT` and database password, supplied as real secrets rather than committed.
+- `NEXT_PUBLIC_*` values are compiled into the browser bundle at image build time, which is why they are build arguments. Changing the public URLs means rebuilding the web image, not just restarting it. `API_INTERNAL_URL` is the exception: server-side rendering reads it at runtime so the web container can reach the API over the private network while the browser still uses the public origin.
+
+The sections below describe deploying the two apps properly, without compose.
+
+---
+
 ## 1. Database
 
 MySQL 8.0 or later.

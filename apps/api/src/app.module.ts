@@ -10,7 +10,6 @@ import { SiteModule } from "./site/site.module";
 import { LeadsModule } from "./leads/leads.module";
 import { AskModule } from "./ask/ask.module";
 import { AdminModule } from "./admin/admin.module";
-import { CONFIG_TOKEN } from "./config/configuration";
 import { ConfigModule } from "./config/config.module";
 
 @Controller("health")
@@ -20,7 +19,6 @@ export class HealthController {
     return { status: "ok", timestamp: new Date().toISOString() };
   }
 }
-
 @Module({
   imports: [
     ConfigModule,
@@ -36,6 +34,5 @@ export class HealthController {
     AdminModule,
   ],
   controllers: [HealthController],
-  exports: [CONFIG_TOKEN],
 })
 export class AppModule {}

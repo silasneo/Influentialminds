@@ -4,19 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Menu, Search, X } from "lucide-react";
-
-export interface NavLink {
-  href: string;
-  label: string;
-}
-
-export const PRIMARY_NAV: NavLink[] = [
-  { href: "/episodes", label: "Conversations" },
-  { href: "/topics", label: "Ideas" },
-  { href: "/guests", label: "People" },
-  { href: "/collections", label: "Collections" },
-  { href: "/about", label: "About" },
-];
+import { PRIMARY_NAV } from "@/lib/navigation";
 
 interface SiteHeaderProps {
   siteTitle: string;

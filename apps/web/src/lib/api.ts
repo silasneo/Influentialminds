@@ -19,6 +19,18 @@ import type {
 export const API_BASE_URL = (
   process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000"
 ).replace(/\/+$/, "");
+
+/**
+ * The browser reaches the API on its public origin, but a server render inside
+ * a container reaches it on the private network instead. `API_INTERNAL_URL`
+ * overrides the origin for server-side fetches only; without it both use the
+ * public origin, which is correct for a single-host deployment.
+ */
+function originForThisRuntime(): string {
+  if (typeof window !== "undefined") return API_BASE_URL;
+  const internal = process.env.API_INTERNAL_URL;
+  return internal ? internal.replace(/\/+$/, "") : API_BASE_URL;
+}
 export const SITE_URL = (
   process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000"
 ).replace(/\/+$/, "");
@@ -46,7 +58,9 @@ export function apiUrl(
   query?: Record<string, string | number | undefined | null>
 ): string {
   const normalised = path.replace(/^\/+/, "");
-  const url = new URL(`${API_BASE_URL}/${API_VERSION_PREFIX}/${normalised}`);
+  const url = new URL(
+    `${originForThisRuntime()}/${API_VERSION_PREFIX}/${normalised}`
+  );
   for (const [key, value] of Object.entries(query ?? {})) {
     if (value === undefined || value === null || value === "") continue;
     url.searchParams.set(key, `${value}`);
@@ -94,7 +108,7 @@ async function request<T>(
   } catch (cause) {
     throw new ApiError(
       0,
-      `Unable to reach the Influential Minds API at ${API_BASE_URL}. ${(cause as Error).message}`
+      `Unable to reach the Influential Minds API at ${originForThisRuntime()}. ${(cause as Error).message}`
     );
   }
 
