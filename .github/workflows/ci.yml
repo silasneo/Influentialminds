@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, prod-deploy]
   pull_request:
 
 concurrency:
@@ -85,3 +85,36 @@ jobs:
           --to-schema-datamodel prisma/schema.prisma
           --shadow-database-url "$DATABASE_URL"
           --exit-code
+
+  images:
+    name: Build release images
+    # The deployable artefact is the container, not the workspace build, so it
+    # is verified on the branch production is cut from.
+    if: github.ref == 'refs/heads/prod-deploy'
+    needs: [verify, migrations]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Build the API image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: apps/api/Dockerfile
+          push: false
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build the web image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: apps/web/Dockerfile
+          push: false
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            NEXT_PUBLIC_API_URL=${{ vars.NEXT_PUBLIC_API_URL || 'http://localhost:4000' }}
+            NEXT_PUBLIC_SITE_URL=${{ vars.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000' }}

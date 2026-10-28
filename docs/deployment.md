@@ -141,9 +141,26 @@ With that split, set `AUTH_COOKIE_DOMAIN=.influentialminds.com` so the admin ses
 
 ## 5. Continuous integration
 
-`.github/workflows/ci.yml` runs on every push and pull request:
+`.github/workflows/ci.yml` runs on every pull request and on pushes to `main` and `prod-deploy`:
 
 1. **verify** — install, generate the Prisma client, typecheck, test, build all three packages.
 2. **migrations** — start MySQL 8, apply the committed migrations, then assert with `prisma migrate diff --exit-code` that the migration history still reproduces `schema.prisma`. This catches a schema edit committed without its migration.
+3. **images** — `prod-deploy` only. Builds both release containers after the first two jobs pass, because the deployable artefact is the image, not the workspace build. A Dockerfile that breaks while `pnpm build` still succeeds is caught here rather than during a release.
 
 The old GitHub Pages workflow has been removed; the site is no longer static.
+
+### Branches
+
+| Branch        | Role                                                                         |
+| ------------- | ---------------------------------------------------------------------------- |
+| `main`        | Integration. Every pull request lands here and runs verify and migrations.   |
+| `prod-deploy` | What production is cut from. Adds the container build on top of both checks. |
+
+Promote by fast-forwarding `prod-deploy` to the reviewed commit on `main`:
+
+```bash
+git fetch origin
+git push origin origin/main:prod-deploy
+```
+
+The web image inlines `NEXT_PUBLIC_API_URL` and `NEXT_PUBLIC_SITE_URL` at build time, so set them as repository **variables** (not secrets — they are public and must match the live hostnames) before cutting a release. Without them the job falls back to the localhost defaults, which is correct for a build check but not for a shipped image.
