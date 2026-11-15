@@ -3,6 +3,7 @@
 **Status:** proposal. Nothing in this document is implemented.
 **Supersedes:** the lexical scorer in `apps/api/src/ask/retrieval.service.ts`.
 **Does not change:** citations, the Ask UI, or the daily query tiers in SOW item 8.
+**No external service.** Embeddings run locally inside the existing API process.
 
 ---
 
@@ -40,7 +41,7 @@ body, the upgrade message — sits upstream and is unaffected.
 flowchart TD
   Q[POST /ask] --> G[consumeQuota<br/>SOW item 8 gate]
   G --> R{RetrievalService}
-  R -.->|replaced| R2[hybrid lexical + vector]
+  R -.->|replaced| R2[hybrid lexical + vector<br/>in-process]
   R2 --> P[RetrievalPassage rows<br/>from the database]
   P --> A[AskProvider writes prose]
   P --> S[AskSource cards<br/>with exact ?t= links]
@@ -53,60 +54,67 @@ flowchart TD
 
 Green is untouched. Only the blue box is new work.
 
-## 3. Correction to the requested model
+## 3. Decision: local embeddings only
 
-The brief asked for **`text-embedding-005`**. That model is Vertex AI only: it
-requires a Google Cloud project and **service-account or OAuth2 credentials**,
-not a simple API key. Wiring service-account JSON through Docker and CI is
-materially heavier than this feature warrants, and Google's older
-`text-embedding-00x` line is being retired in favour of the Gemini embedding
-models.
+An earlier draft paired a hosted Google model with a local fallback. That design
+had a trap: **vectors from different models are not comparable.** A 768-dim
+Gemini vector and a 384-dim MiniLM vector occupy unrelated spaces, so a cosine
+between them is noise. Supporting both meant indexing every passage twice and
+routing queries to the matching index — real complexity, for a corpus of a few
+hundred passages.
 
-**Recommended instead:** `gemini-embedding-001` on the Gemini API —
+**Running one local model removes that problem entirely.** What it buys:
 
-```
-POST https://generativelanguage.googleapis.com/v1beta/models/gemini-embedding-001:embedContent
-```
+|                                             | Local-only                |
+| ------------------------------------------- | ------------------------- |
+| Vendor accounts, API keys, billing          | none                      |
+| Cost, at any volume                         | **$0**                    |
+| Rate limits, quota exhaustion, 429 handling | n/a                       |
+| Network dependency at query time            | none                      |
+| Visitor questions sent to a third party     | none                      |
+| Failure modes to design around              | one (model fails to load) |
 
-- authenticates with a plain **API key**, exactly like `BREVO_API_KEY`
-- has a **free tier**, which is what was actually being asked for
-- supports Matryoshka truncation, so we can request **768 dimensions** and keep
-  vectors small without retraining
+The last two matter beyond engineering convenience. Visitor questions are the
+most sensitive data the site handles, and keeping them in-process is consistent
+with the stated position in `docs/roadmap.md` that no third-party scripts run on
+the public site.
 
-The model name stays configurable, so pointing at Vertex or a newer Gemini
-embedding model later is a config change, not a code change.
+**The honest cost:** `all-MiniLM-L6-v2` is a 2021-era model and measurably weaker
+than current hosted embeddings on paraphrase recall. For a ten-episode archive of
+conversational English, that gap is small — and the hybrid design in §6.3 keeps
+the lexical scorer alongside it, so a weaker vector arm degrades ranking rather
+than breaking it. If the archive grows to the point where recall is the
+bottleneck, swapping the model is a config change (§7), not a redesign.
 
-## 4. The hard part: two providers cannot share one index
+## 4. Model
 
-The brief asks for Gemini with a **local MiniLM fallback when the free tier is
-exhausted**. There is a trap here that determines the whole design.
+**`Xenova/all-MiniLM-L6-v2`**, 384 dimensions, via `@huggingface/transformers`
+(the maintained successor to `@xenova/transformers`), running on
+`onnxruntime-node` inside the existing Node 22 container (`apps/api/Dockerfile:4`).
 
-**Embeddings from different models are not comparable.** A Gemini 768-dim vector
-and a MiniLM 384-dim vector occupy unrelated spaces. Cosine between them is
-noise, not similarity. A naive fallback would not degrade gracefully — it would
-return confident nonsense, which is worse than returning nothing.
+| Property            | Value               | Consequence                             |
+| ------------------- | ------------------- | --------------------------------------- |
+| Dimensions          | 384                 | 1.5 KB per vector                       |
+| **Max sequence**    | **256 word-pieces** | **Hard cap on passage length — see §5** |
+| Weights (fp32 ONNX) | ~90 MB              | Baked into the image                    |
+| Query latency       | ~5–15 ms CPU        | Invisible next to the LLM call          |
+| Language            | English only        | Matches the archive                     |
 
-**Solution: dual indexing.** Every passage is embedded with _both_ models at
-ingest. Local embedding is free and runs in-process, so the only cost is a few
-seconds of CPU per transcript. At query time the question is embedded with
-whichever provider is available, and compared **only against vectors from that
-same model**.
+The 256-token ceiling is the one constraint that shapes the data model. Anything
+longer is **silently truncated**, not rejected — a passage whose second half is
+never embedded would be invisible to search with no error anywhere. Passage size
+is therefore a correctness concern, not a tuning preference.
 
-| Situation                 | Query embedded with | Compared against | Result                                |
-| ------------------------- | ------------------- | ---------------- | ------------------------------------- |
-| Normal                    | Gemini              | Gemini index     | Full quality                          |
-| Free tier exhausted (429) | MiniLM              | MiniLM index     | Slightly lower recall, still semantic |
-| Both unavailable          | —                   | —                | Falls back to today's lexical scorer  |
-
-Three tiers of degradation, each one coherent. The lexical scorer is never
-deleted; it becomes the floor.
+`bge-small-en-v1.5` (also 384-dim, 512-token window, stronger on retrieval
+benchmarks) is a drop-in alternative if quality proves insufficient. Keeping the
+model id in config means that swap costs a reindex, nothing more.
 
 ## 5. Data model
 
 Transcript segments are too short to embed well — WebVTT cues are often a single
 clause. Segments are merged into **passages** of roughly 45 seconds or 600
-characters, with one segment of overlap so a thought split across a boundary is
-still reachable.
+characters (~130 word-pieces, comfortably inside the 256 ceiling), with one
+segment of overlap so a thought split across a boundary is still reachable.
 
 A passage's `startSeconds` is taken from its first real segment, so the citation
 remains an exact timestamp.
@@ -120,61 +128,61 @@ model TranscriptPassage {
   text         String  @db.Text
   sortOrder    Int     @default(0)
 
-  transcript Transcript          @relation(fields: [transcriptId], references: [id], onDelete: Cascade)
-  embeddings PassageEmbedding[]
+  /** Model identity, e.g. "minilm-l6-v2". Vectors are only ever compared with
+      others carrying the same value, so a model swap cannot silently mix
+      incompatible spaces mid-reindex. */
+  embeddingModel String? @db.VarChar(80)
+  dim            Int?
+  /** Float32Array, L2-normalised at write time so cosine is a dot product. */
+  embedding      Bytes?  @db.MediumBlob
+  embeddedAt     DateTime?
+
+  transcript Transcript @relation(fields: [transcriptId], references: [id], onDelete: Cascade)
 
   @@index([transcriptId, startSeconds])
   @@map("transcript_passages")
 }
-
-model PassageEmbedding {
-  id        String @id @default(cuid())
-  passageId String
-  /** e.g. "gemini-embedding-001" or "minilm-l6-v2". Vectors are only ever
-      compared with others carrying the same model string. */
-  model     String @db.VarChar(80)
-  dim       Int
-  /** Float32Array, L2-normalised at write time so cosine is a dot product. */
-  vector    Bytes  @db.MediumBlob
-
-  passage TranscriptPassage @relation(fields: [passageId], references: [id], onDelete: Cascade)
-
-  @@unique([passageId, model])
-  @@map("passage_embeddings")
-}
 ```
+
+With one model there is no need for a separate embeddings table; the vector is a
+column on the passage. `embeddingModel` is still recorded because a reindex after
+a model change is not instantaneous, and during it the table legitimately holds
+two incompatible spaces. Retrieval filters on the active model, so a half-finished
+reindex degrades to lexical rather than returning garbage.
 
 MySQL 8.4 has no native `VECTOR` type, hence `MEDIUMBLOB`. At this corpus size
 that is not a compromise:
 
-| Corpus       | Passages | Gemini 768-dim | MiniLM 384-dim | Both in RAM |
-| ------------ | -------- | -------------- | -------------- | ----------- |
-| 10 episodes  | ~800     | 2.4 MB         | 1.2 MB         | **3.6 MB**  |
-| 100 episodes | ~8,000   | 24 MB          | 12 MB          | 36 MB       |
+| Corpus       | Passages | Vectors on disk | In RAM |
+| ------------ | -------- | --------------- | ------ |
+| 10 episodes  | ~800     | 1.2 MB          | 1.2 MB |
+| 100 episodes | ~8,000   | 12 MB           | 12 MB  |
 
-A brute-force scan of 800 vectors is a few milliseconds. No vector database, no
+A brute-force scan of 800 vectors is sub-millisecond. No vector database, no
 index structure, no extra service is justified until the archive is ~10× larger.
 
-**Why the database rather than the filesystem.** Vectors are written in the same
-transaction as the passages, so they cannot drift from the transcript; they are
-covered by the existing MySQL backups in `docs/deployment.md`; and a container
-recreated without a volume cannot silently empty the index. The in-memory cache
-is the fast path; the database is the truth.
+**Why the database rather than the filesystem.** Vectors are written alongside
+the passages, so they cannot drift from the transcript; they are covered by the
+existing MySQL backups in `docs/deployment.md`; and a container recreated without
+a volume cannot silently empty the index. The in-memory cache is the fast path;
+the database is the truth.
 
 ## 6. Components
 
-### 6.1 `EmbeddingProvider`
+### 6.1 `EmbeddingService`
 
-Mirrors the existing `AskProvider` and `MailProvider` shape — interface, string
-injection token, `useFactory` switching on config.
+With a single model there is no provider-selection problem, so this is a plain
+service rather than the token-and-`useFactory` pattern used for `AskProvider` and
+`MailProvider`. One switch remains:
 
 ```ts
-export interface EmbeddingProvider {
-  /** Identity stored on every vector; vectors are only compared within a model. */
-  readonly model: string;
-  readonly dim: number;
-  readonly available: boolean;
-  /** Returns one normalised vector per input, or null when the provider fails. */
+@Injectable()
+export class EmbeddingService {
+  readonly model: string; // from config
+  readonly dim = 384;
+  get ready(): boolean; // false until the pipeline has loaded
+
+  /** Normalised vectors, or null if the model is disabled or failed to load. */
   embed(
     texts: string[],
     kind: "document" | "query"
@@ -182,165 +190,178 @@ export interface EmbeddingProvider {
 }
 ```
 
-Implementations:
+- The pipeline is loaded **lazily on first use** and memoised, so boot time and
+  the `/health` probe are unaffected.
+- `embed()` returns `null` rather than throwing. A model that fails to load must
+  degrade Ask to lexical search, never fail the request — the same contract as
+  `BrevoMailProvider.request()`.
+- `EMBEDDING_ENABLED=false` short-circuits to `null`, preserving today's exact
+  behaviour and giving tests a deterministic off switch.
+- `kind` is accepted now and unused by MiniLM, which embeds queries and documents
+  identically. It is in the signature because asymmetric models (`bge-*`, `e5-*`,
+  all hosted models) require a prefix or task type, and retrofitting it later
+  would mean reindexing.
 
-- **`GeminiEmbeddingProvider`** — `embedContent`, API key header,
-  `outputDimensionality: 768`, `taskType` of `RETRIEVAL_DOCUMENT` or
-  `RETRIEVAL_QUERY`. Returns `null` on 429 or any failure rather than throwing.
-- **`LocalEmbeddingProvider`** — `@huggingface/transformers` running
-  `all-MiniLM-L6-v2` (384-dim) in-process. No key, no network.
-- **`DisabledEmbeddingProvider`** — always `null`; retrieval stays lexical.
-
-`taskType` matters: Gemini embeds questions and documents differently, and using
-the wrong one measurably hurts recall.
+**Concurrency.** `onnxruntime-node` executes inference on its own native thread
+pool, so a single `embed()` call does not block the event loop. Ingest still
+batches and bounds concurrency so a large transcript cannot saturate the CPU the
+API is serving requests with.
 
 ### 6.2 Indexing
 
 Hooks into the existing `TranscriptService.upload()` transaction
 (`transcript.service.ts:133-168`), which already deletes and recreates the whole
-transcript. Passages are built there; embedding runs immediately afterwards,
-outside the transaction, and writes vectors per model.
+transcript. Passages are built inside that transaction; embedding runs
+immediately afterwards, outside it, so a slow CPU cannot hold a write lock.
 
 Because `upload()` replaces everything, stale vectors are impossible — they
-cascade away with the old transcript.
+cascade away with the old transcript. A re-upload is automatically a reindex.
 
-An admin **Reindex** action and a `pnpm db:reindex` script cover backfill, a
-model change, or a free-tier failure during ingest. Passages missing a vector for
-the active model are simply re-embedded.
+An admin **Reindex** action and a `pnpm db:reindex` script cover backfill and
+model changes. Both work by selecting passages whose `embeddingModel` differs
+from the active one, so a run is idempotent and resumable by construction.
 
-Gemini's free tier is rate limited per minute, so ingest batches ~64 texts per
-request with exponential backoff, and records per-model progress so a run can
-resume rather than restart.
+Expected initial index: ~800 passages, **under a minute** on a single core.
 
 ### 6.3 Retrieval
 
 `RetrievalService.retrieve()` keeps its signature, so `AskService` needs no
 change at all. Internally:
 
-1. Embed the question (Gemini, else MiniLM, else skip).
-2. Score every cached vector for that model by dot product.
+1. Embed the question. If `null`, skip to step 3 — this is the degraded path.
+2. Score every cached vector for the active model by dot product.
 3. Run the existing lexical scorer unchanged.
 4. Fuse the two rankings with **Reciprocal Rank Fusion**, `1/(60 + rank)`.
 5. Apply the existing one-passage-per-episode diversity rule
    (`retrieval.service.ts:207-217`).
 6. Build `RetrievalPassage` objects exactly as today.
 
-RRF is chosen deliberately over a weighted sum: lexical scores are 0–1 coverage
-ratios and cosine similarities are not on the same scale, and rank fusion avoids
-inventing a calibration constant that would need retuning per corpus.
+The lexical arm is retained permanently, not as a fallback. Vectors handle
+paraphrase; keyword matching keeps proper nouns sharp — a question naming a guest
+should return that guest, and embeddings are unreliable about rare names. The
+two failure modes are close to complementary.
+
+RRF is chosen over a weighted sum because lexical scores are 0–1 coverage ratios
+and cosine similarities are not on the same scale; rank fusion avoids inventing a
+calibration constant that would need retuning as the corpus grows.
 
 **Threshold handling.** `AI_MIN_SCORE` currently gates `noMatch`
 (`ask.service.ts:67`). Under fusion it keeps its meaning for the lexical arm, and
 a new `AI_SEMANTIC_MIN_SCORE` (default `0.35` cosine) gates the vector arm. A
-passage qualifies if **either** arm clears its threshold. The "I could not find
-that in the archive yet" response is preserved for genuinely absent topics —
-which matters, because a vector search always returns a nearest neighbour, and
-without a floor it would confidently surface the least-irrelevant passage.
+passage qualifies if **either** arm clears its threshold.
+
+This floor is essential. A vector search always returns a nearest neighbour, so
+without it the "I could not find that in the archive yet" response would
+disappear entirely and off-topic questions would confidently surface the
+least-irrelevant passage in the archive. The threshold is what keeps that answer
+honest, and it should be tuned against real questions once transcripts exist.
 
 ### 6.4 Cache
 
-Vectors for the active model load into a `Map<string, Float32Array>` at boot and
-refresh when a transcript is uploaded or reindexed. At 3.6 MB this is
-unremarkable; it only needs revisiting if the API is ever scaled to multiple
-replicas, where each would simply hold its own copy.
+Vectors for the active model load into a `Map<string, Float32Array>` at first
+query and refresh when a transcript is uploaded or reindexed. At ~1.2 MB this is
+unremarkable; it only needs revisiting if the API is scaled to multiple replicas,
+where each would simply hold its own copy.
 
 ## 7. Configuration
 
-Follows the `EMAIL_PROVIDER` pattern: default off, so nothing changes until it is
-switched on.
+Default off, so nothing changes until it is switched on. All optional values use
+the existing `optional()` preprocess helper in `configuration.ts`, which treats a
+blank `.env` entry as unset.
 
-| Variable                 | Default                   | Notes                                          |
-| ------------------------ | ------------------------- | ---------------------------------------------- |
-| `EMBEDDING_PROVIDER`     | `disabled`                | `gemini` \| `local` \| `disabled`              |
-| `EMBEDDING_FALLBACK`     | `local`                   | Used when the primary returns 429 or fails     |
-| `GEMINI_API_KEY`         | —                         | **Secret.** Required when provider is `gemini` |
-| `GEMINI_EMBEDDING_MODEL` | `gemini-embedding-001`    |                                                |
-| `GEMINI_EMBEDDING_DIM`   | `768`                     | Matryoshka truncation                          |
-| `LOCAL_EMBEDDING_MODEL`  | `Xenova/all-MiniLM-L6-v2` | Baked into the image                           |
-| `AI_SEMANTIC_MIN_SCORE`  | `0.35`                    | Cosine floor for the vector arm                |
-| `EMBEDDING_BATCH_SIZE`   | `64`                      | Ingest batching                                |
+| Variable                | Default                   | Notes                                         |
+| ----------------------- | ------------------------- | --------------------------------------------- |
+| `EMBEDDING_ENABLED`     | `false`                   | Off ⇒ retrieval behaves exactly as today      |
+| `EMBEDDING_MODEL`       | `Xenova/all-MiniLM-L6-v2` | Changing it requires a reindex                |
+| `EMBEDDING_DIM`         | `384`                     | Validated against the loaded model at startup |
+| `EMBEDDING_BATCH_SIZE`  | `32`                      | Ingest batching                               |
+| `AI_SEMANTIC_MIN_SCORE` | `0.35`                    | Cosine floor for the vector arm               |
 
-Fail-fast validation as with Brevo: `EMBEDDING_PROVIDER=gemini` without
-`GEMINI_API_KEY` refuses to boot.
+No secrets. Nothing to add to `docker-compose.yml` beyond pass-through, and
+nothing to rotate.
 
-**Deployment note.** The MiniLM weights (~90 MB) must be **baked into the Docker
-image** in a build stage, not downloaded at boot. A runtime download would make
-container start depend on Hugging Face being reachable, and would re-download on
-every deploy. Expect the API image to grow by roughly 150 MB including
-`onnxruntime-node`.
+**Deployment.** The model weights must be **baked into the Docker image** in a
+build stage, not downloaded at boot — a runtime download would make container
+start depend on Hugging Face being reachable and would re-fetch on every deploy.
+Set the transformers cache directory to the baked path and disable remote
+fetching so a missing model fails loudly at build time rather than silently
+reaching the network in production.
+
+Image impact: **~150 MB** (weights plus `onnxruntime-node` native binaries). The
+binaries are platform-specific, so the image must be built for the deployment
+architecture — building on an arm64 laptop for an amd64 host will produce an
+image that fails at first inference, not at build.
 
 ## 8. Cost
 
-| Item                       | Volume       | Cost                       |
-| -------------------------- | ------------ | -------------------------- |
-| Initial index, 10 episodes | ~120k tokens | **free tier**, else ~$0.02 |
-| Re-index after an edit     | one episode  | negligible                 |
-| Per visitor question       | ~20 tokens   | ~$0.000003                 |
-| Local fallback             | any          | **$0**                     |
-
-Cost is not a design constraint here. Free-tier _rate_ limits are the only real
-operational concern, and the local fallback exists precisely to absorb them.
+Zero. No per-query cost, no per-episode cost, no account, no key, no vendor to
+review. The only resource consumed is CPU already paid for.
 
 ## 9. Testing
 
 Following the existing direct-construction style (`transcript-parser.spec.ts`),
 since vitest/esbuild cannot compile Nest's decorator metadata:
 
-- `splitIntoPassages()` — 45s/600-char windows, overlap, `startSeconds` always
+- `splitIntoPassages()` — 45 s / 600-char windows, overlap, `startSeconds` always
   taken from a real segment, empty and single-segment transcripts.
+- **Token ceiling** — no generated passage exceeds the model's sequence limit.
+  This is the test that protects against silent truncation.
 - Vector codec — `Float32Array` → `Buffer` → `Float32Array` round-trip,
   normalisation, dimension mismatch rejected.
-- `GeminiEmbeddingProvider` — stubbed `fetch`; correct endpoint, key header,
-  `taskType` differs for query vs document; 429 and network error both return
-  `null` rather than throwing.
-- Fallback selection — a `null` from the primary routes to the fallback **and**
-  queries the fallback's index, never the primary's.
+- `EmbeddingService` — disabled returns `null`; a load failure returns `null`
+  rather than throwing; vectors are unit length.
+- Model filtering — a passage embedded with a different `embeddingModel` is
+  excluded from scoring, simulating a half-finished reindex.
 - RRF fusion — a passage ranked highly by only one arm still surfaces; a passage
   ranked by both outranks it.
 - Threshold — an off-topic question yields `noMatch` despite vectors always
   having a nearest neighbour.
-- Regression — with `EMBEDDING_PROVIDER=disabled`, retrieval results are
-  byte-identical to today's.
+- Regression — with `EMBEDDING_ENABLED=false`, retrieval results are identical to
+  today's.
 
-A small fixture set of real transcript text with expected paraphrase matches
-("burnout" → "depleted") is worth more than any synthetic assertion here.
+Unit tests use fixed stub vectors, so the suite stays fast and deterministic and
+CI never loads the model. One opt-in integration test exercises the real pipeline
+against a small fixture of transcript text with expected paraphrase matches
+("burnout" → "depleted"); that fixture is worth more than any synthetic assertion
+about cosine values.
 
 ## 10. Effort
 
-| Task                                          | Estimate      |
-| --------------------------------------------- | ------------- |
-| Schema, migration, vector codec               | 0.5 d         |
-| Embedding providers, module, config           | 1.0 d         |
-| Passage building + indexing + reindex command | 1.5 d         |
-| Hybrid retrieval, fusion, cache               | 1.5 d         |
-| Admin reindex UI and status                   | 0.5 d         |
-| Tests                                         | 1.0 d         |
-| Docs, Dockerfile model bake, CI               | 0.5 d         |
-| **Total**                                     | **~6.5 days** |
+| Task                                                | Estimate      |
+| --------------------------------------------------- | ------------- |
+| Schema, migration, vector codec                     | 0.5 d         |
+| `EmbeddingService` + config + Dockerfile model bake | 1.0 d         |
+| Passage building, indexing, reindex command         | 1.0 d         |
+| Hybrid retrieval, RRF fusion, cache                 | 1.5 d         |
+| Admin reindex UI and status                         | 0.5 d         |
+| Tests                                               | 0.5 d         |
+| Docs and CI                                         | 0.5 d         |
+| **Total**                                           | **~5.5 days** |
 
-Phaseable: tasks 1–4 deliver the capability; 5 is convenience; the feature can
-ship behind `EMBEDDING_PROVIDER=disabled` and be switched on after the index is
-built.
+Phaseable. Tasks 1–4 deliver the capability; task 5 is convenience. The feature
+can ship with `EMBEDDING_ENABLED=false` and be switched on once the index is
+built and the thresholds are tuned against real questions.
 
 ## 11. Risks
 
-| Risk                                          | Mitigation                                                       |
-| --------------------------------------------- | ---------------------------------------------------------------- |
-| Mixed-model vectors compared by accident      | `model` on every row; retrieval filters by it; covered by a test |
-| Free tier exhausted mid-ingest                | Resumable batched indexing; local provider completes the run     |
-| Vector search always returns _something_      | `AI_SEMANTIC_MIN_SCORE` floor; `noMatch` path kept               |
-| Image size / cold start from local model      | Baked at build time; loaded lazily on first fallback             |
-| Quality regression vs lexical for exact names | Hybrid fusion keeps the lexical arm permanently                  |
-| Index drifts from edited transcripts          | Written in the upload path; old vectors cascade-delete           |
+| Risk                                             | Mitigation                                                        |
+| ------------------------------------------------ | ----------------------------------------------------------------- |
+| Passage silently truncated past 256 tokens       | Passage size capped below the limit; asserted in tests            |
+| Vector search always returns _something_         | `AI_SEMANTIC_MIN_SCORE` floor; `noMatch` path kept                |
+| Incompatible vectors during a model change       | `embeddingModel` per row; retrieval filters on it                 |
+| Image size and cold start                        | Weights baked at build; pipeline loaded lazily and memoised       |
+| Native binaries built for the wrong architecture | Build for the deployment platform; smoke-test inference in CI     |
+| Recall weaker than a hosted model                | Lexical arm retained; model id is config-swappable                |
+| Index drifts from edited transcripts             | Written in the upload path; old vectors cascade-delete            |
+| CPU contention during a large ingest             | Bounded batch concurrency; embedding runs outside the transaction |
 
 ## 12. Open questions
 
 1. **Transcript source.** The archive currently has **0 transcript segments**.
-   Nothing here is testable until real transcripts exist. YouTube auto-captions
-   are the obvious seed, subject to editorial review.
+   Nothing here is testable, and Ask returns nothing today regardless of this
+   work. YouTube auto-captions are the obvious seed, subject to editorial review.
+   This is the real blocker for SOW item 8 and should be resolved first.
 2. **Prose provider.** This spec assumes MindStudio stays as written in the SOW.
-   The two choices are fully independent.
-3. **Contractual.** The SOW names MindStudio as the RAG platform. Adding Google
-   for embeddings is an additional vendor and may warrant client sign-off.
-4. **Scope.** This is retrieval quality work, not an item in the ten priced
+   Retrieval and prose generation are fully independent choices.
+3. **Scope.** This is retrieval quality work, not one of the ten priced
    deliverables. It should be quoted separately rather than absorbed.
