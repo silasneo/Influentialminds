@@ -24,6 +24,12 @@ async function bootstrap(): Promise<void> {
   app.use(cookieParser());
   app.set("trust proxy", 1);
 
+  // Sized to `transcriptUploadSchema`'s 4,000,000-character cap plus JSON
+  // escaping overhead. The 100 KB default silently rejected every real
+  // transcript — an hour of captions is comfortably past it.
+  app.useBodyParser("json", { limit: "6mb" });
+  app.useBodyParser("urlencoded", { limit: "6mb", extended: true });
+
   app.enableCors({ origin: config.corsOrigins, credentials: true });
   app.setGlobalPrefix(API_VERSION_PREFIX);
   app.useGlobalFilters(new ApiExceptionFilter());

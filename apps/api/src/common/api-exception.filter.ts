@@ -38,6 +38,21 @@ export class ApiExceptionFilter implements ExceptionFilter {
       return;
     }
 
+    // body-parser rejects before any route runs, so without this an oversized
+    // transcript surfaced as an opaque 500 rather than a fixable message.
+    if (
+      exception instanceof Error &&
+      (exception as { type?: string }).type === "entity.too.large"
+    ) {
+      response.status(HttpStatus.PAYLOAD_TOO_LARGE).json({
+        statusCode: 413,
+        error: "Payload Too Large",
+        message:
+          "That file is too large to upload. Split the transcript or reduce the file size.",
+      });
+      return;
+    }
+
     if (exception instanceof Prisma.PrismaClientKnownRequestError) {
       if (exception.code === "P2002") {
         response.status(HttpStatus.CONFLICT).json({
