@@ -10,115 +10,14 @@ import type {
 } from "@influential-minds/contracts";
 import { EDITORIAL_STATUSES } from "@influential-minds/contracts";
 import { adminApi } from "@/lib/admin-client";
+import { errorMessage, Field, PanelError, StatusPill, Toolbar } from "./ui";
 import {
-  errorMessage,
-  Field,
-  PanelError,
-  StatusPill,
-  Toolbar,
-  toLines,
-} from "./ui";
-
-interface FormState {
-  title: string;
-  slug: string;
-  episodeNumber: string;
-  season: string;
-  youtubeUrl: string;
-  youtubePlaylistId: string;
-  thumbnailUrl: string;
-  durationSeconds: string;
-  publishedAt: string;
-  status: string;
-  summary: string;
-  description: string;
-  spotifyUrl: string;
-  applePodcastsUrl: string;
-  guestIds: string[];
-  topicIds: string[];
-  collectionIds: string[];
-  takeaways: string;
-  seoTitle: string;
-  seoDescription: string;
-}
-
-const EMPTY: FormState = {
-  title: "",
-  slug: "",
-  episodeNumber: "",
-  season: "",
-  youtubeUrl: "",
-  youtubePlaylistId: "",
-  thumbnailUrl: "",
-  durationSeconds: "",
-  publishedAt: "",
-  status: "DRAFT",
-  summary: "",
-  description: "",
-  spotifyUrl: "",
-  applePodcastsUrl: "",
-  guestIds: [],
-  topicIds: [],
-  collectionIds: [],
-  takeaways: "",
-  seoTitle: "",
-  seoDescription: "",
-};
-
-function toForm(episode: Episode): FormState {
-  return {
-    title: episode.title,
-    slug: episode.slug,
-    episodeNumber:
-      episode.episodeNumber === null ? "" : `${episode.episodeNumber}`,
-    season: episode.season === null ? "" : `${episode.season}`,
-    youtubeUrl: episode.youtubeUrl,
-    youtubePlaylistId: episode.youtubePlaylistId ?? "",
-    thumbnailUrl: episode.thumbnailUrl,
-    durationSeconds:
-      episode.durationSeconds === null ? "" : `${episode.durationSeconds}`,
-    publishedAt: episode.publishedAt ? episode.publishedAt.slice(0, 10) : "",
-    status: episode.status,
-    summary: episode.summary ?? "",
-    description: episode.description ?? "",
-    spotifyUrl: episode.spotifyUrl ?? "",
-    applePodcastsUrl: episode.applePodcastsUrl ?? "",
-    guestIds: episode.guests.map(guest => guest.id),
-    topicIds: episode.topics.map(topic => topic.id),
-    collectionIds: episode.collections.map(collection => collection.id),
-    takeaways: episode.takeaways.map(takeaway => takeaway.text).join("\n"),
-    seoTitle: episode.seoTitle ?? "",
-    seoDescription: episode.seoDescription ?? "",
-  };
-}
-
-function toPayload(form: FormState) {
-  return {
-    title: form.title,
-    slug: form.slug || undefined,
-    episodeNumber: form.episodeNumber ? Number(form.episodeNumber) : null,
-    season: form.season ? Number(form.season) : null,
-    youtubeUrl: form.youtubeUrl,
-    youtubePlaylistId: form.youtubePlaylistId || null,
-    thumbnailUrl: form.thumbnailUrl || null,
-    durationSeconds: form.durationSeconds ? Number(form.durationSeconds) : null,
-    publishedAt: form.publishedAt
-      ? new Date(`${form.publishedAt}T12:00:00.000Z`).toISOString()
-      : null,
-    status: form.status,
-    summary: form.summary || null,
-    description: form.description || null,
-    spotifyUrl: form.spotifyUrl || null,
-    applePodcastsUrl: form.applePodcastsUrl || null,
-    guestIds: form.guestIds,
-    topicIds: form.topicIds,
-    collectionIds: form.collectionIds,
-    takeaways: toLines(form.takeaways),
-    quotes: [],
-    seoTitle: form.seoTitle || null,
-    seoDescription: form.seoDescription || null,
-  };
-}
+  EMPTY_FORM as EMPTY,
+  toForm,
+  toPayload,
+  type FormState,
+  type QuoteDraft,
+} from "./episode-form";
 
 export function EpisodesPanel() {
   const [items, setItems] = useState<AdminEpisodeSummary[]>([]);
@@ -164,6 +63,29 @@ export function EpisodesPanel() {
   const set = <K extends keyof FormState>(key: K, value: FormState[K]) =>
     setForm(previous => ({ ...previous, [key]: value }));
 
+  const updateQuote = (index: number, patch: Partial<QuoteDraft>) =>
+    setForm(previous => ({
+      ...previous,
+      quotes: previous.quotes.map((quote, position) =>
+        position === index ? { ...quote, ...patch } : quote
+      ),
+    }));
+
+  const addQuote = () =>
+    setForm(previous => ({
+      ...previous,
+      quotes: [
+        ...previous.quotes,
+        { text: "", attribution: "", timestamp: "" },
+      ],
+    }));
+
+  const removeQuote = (index: number) =>
+    setForm(previous => ({
+      ...previous,
+      quotes: previous.quotes.filter((_, position) => position !== index),
+    }));
+
   const multiValue = useMemo(
     () => ({
       guestIds: form.guestIds,
@@ -204,7 +126,7 @@ export function EpisodesPanel() {
         : await adminApi.createEpisode(payload);
       setEditing(saved);
       setForm(toForm(saved));
-      setNotice(`Saved “${saved.title}”.`);
+      setNotice(`Saved â€œ${saved.title}â€.`);
       await refresh(search);
     } catch (cause) {
       setError(errorMessage(cause));
@@ -224,7 +146,7 @@ export function EpisodesPanel() {
   }
 
   async function remove(id: string, title: string) {
-    if (!window.confirm(`Delete “${title}”? This cannot be undone.`)) return;
+    if (!window.confirm(`Delete â€œ${title}â€? This cannot be undone.`)) return;
     try {
       await adminApi.deleteEpisode(id);
       if (editing?.id === id) setShowForm(false);
@@ -403,6 +325,69 @@ export function EpisodesPanel() {
             />
           </Field>
 
+          <Field
+            label="Pull quotes"
+            hint="Shown on the conversation page. Timestamp accepts mm:ss or hh:mm:ss."
+          >
+            <div style={{ display: "grid", gap: 10 }}>
+              {form.quotes.map((quote, index) => (
+                <div
+                  key={index}
+                  style={{
+                    display: "grid",
+                    gap: 6,
+                    padding: 10,
+                    border: "1px solid var(--admin-border, #d7dbe3)",
+                    borderRadius: 8,
+                  }}
+                >
+                  <textarea
+                    rows={2}
+                    placeholder="Quote"
+                    value={quote.text}
+                    onChange={event =>
+                      updateQuote(index, { text: event.target.value })
+                    }
+                  />
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <input
+                      style={{ flex: 2 }}
+                      placeholder="Attribution"
+                      value={quote.attribution}
+                      onChange={event =>
+                        updateQuote(index, { attribution: event.target.value })
+                      }
+                    />
+                    <input
+                      style={{ flex: 1 }}
+                      placeholder="12:34"
+                      value={quote.timestamp}
+                      onChange={event =>
+                        updateQuote(index, { timestamp: event.target.value })
+                      }
+                    />
+                    <button
+                      type="button"
+                      className="button button--ghost"
+                      onClick={() => removeQuote(index)}
+                    >
+                      Remove
+                    </button>
+                  </div>
+                </div>
+              ))}
+              <div>
+                <button
+                  type="button"
+                  className="button button--ghost"
+                  onClick={addQuote}
+                >
+                  Add quote
+                </button>
+              </div>
+            </div>
+          </Field>
+
           <div className="admin-grid" style={{ marginBottom: 0 }}>
             <Field label="Guests" hint="Ctrl/Cmd-click to select several.">
               <select
@@ -497,6 +482,15 @@ export function EpisodesPanel() {
                 onChange={event => set("seoDescription", event.target.value)}
               />
             </Field>
+            <Field
+              label="Social share image URL"
+              hint="Used for link previews. Falls back to the thumbnail."
+            >
+              <input
+                value={form.ogImageUrl}
+                onChange={event => set("ogImageUrl", event.target.value)}
+              />
+            </Field>
           </div>
 
           <div style={{ display: "flex", gap: 12, marginTop: 10 }}>
@@ -505,7 +499,7 @@ export function EpisodesPanel() {
               className="button button--cobalt"
               disabled={pending}
             >
-              {pending ? "Saving…" : "Save conversation"}
+              {pending ? "Savingâ€¦" : "Save conversation"}
             </button>
             <button
               type="button"
@@ -600,7 +594,7 @@ export function EpisodesPanel() {
                   </span>
                 </td>
                 <td>
-                  {episode.guests.map(guest => guest.name).join(", ") || "—"}
+                  {episode.guests.map(guest => guest.name).join(", ") || "â€”"}
                 </td>
                 <td>
                   <StatusPill status={episode.status} />

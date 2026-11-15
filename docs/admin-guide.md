@@ -20,9 +20,11 @@ Every create, update, status change and delete is written to the audit log on th
 3. Add the **title**. The slug is generated automatically and made unique; override it only if you have a reason, because changing a published slug breaks existing links.
 4. Write the **summary** (used on cards, in search results and in link previews) and the **description**.
 5. Add **key takeaways**, one per line. Commas inside a takeaway are preserved.
-6. Attach **guests**, **topics** and **collections**. A guest must exist before it can be attached.
-7. Set the **duration** and, where it is known, the **published date**. Leave the date blank rather than guessing — the archive sorts unknown dates last instead of inventing a chronology.
-8. Save as **Draft**, then move to **In review**, then **Published**. Only published conversations appear on the public site, in the sitemap or in Ask results.
+6. Add **pull quotes** if the conversation has memorable lines. Each takes the quote itself, an optional attribution, and an optional timestamp as `mm:ss` or `hh:mm:ss`. A timestamped quote links straight to that moment in the video.
+7. Attach **guests**, **topics** and **collections**. A guest must exist before it can be attached.
+8. Set the **duration** and, where it is known, the **published date**. Leave the date blank rather than guessing — the archive sorts unknown dates last instead of inventing a chronology.
+9. Optionally set a **social share image URL** under the SEO fields. Link previews fall back to the video thumbnail when it is blank.
+10. Save as **Draft**, then move to **In review**, then **Published**. Only published conversations appear on the public site, in the sitemap or in Ask results.
 
 ### Editorial accuracy
 
