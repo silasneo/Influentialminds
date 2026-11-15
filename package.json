@@ -19,6 +19,7 @@
     "db:migrate": "pnpm --filter @influential-minds/api prisma:migrate",
     "db:deploy": "pnpm --filter @influential-minds/api prisma:deploy",
     "db:seed": "pnpm --filter @influential-minds/api prisma:seed",
+    "captions:pull": "node scripts/pull-captions.mjs",
     "format": "prettier --write ."
   },
   "devDependencies": {

@@ -71,6 +71,23 @@ Rules the parser applies:
 
 Uploading a transcript replaces any existing transcript for that episode and language.
 
+### Seeding transcripts from YouTube captions
+
+Every conversation on the playlist already has machine-generated captions. `pnpm captions:pull` downloads them and uploads them through the same endpoint the console uses, which is the fastest way to make the whole archive answerable:
+
+```bash
+export ADMIN_EMAIL=... ADMIN_PASSWORD=...
+pnpm captions:pull --dry-run                              # report cue counts, upload nothing
+pnpm captions:pull                                        # every episode with a video id
+pnpm captions:pull --only conversation-with-rana-foroohar # one episode
+```
+
+It needs [yt-dlp](https://github.com/yt-dlp/yt-dlp) on `PATH`, or installed into the active Python (`pip install yt-dlp`), or pointed at by `$YT_DLP`. `--api` overrides the API base URL, which defaults to `$API_URL`.
+
+Because upload replaces by episode and language, re-running is safe and repeatable.
+
+**Captions are a starting point for search, not publishable text.** They are unpunctuated, carry no speaker labels, and routinely mishear proper nouns and technical terms. They make an episode findable immediately; uploading a cleaned transcript later replaces them in place.
+
 ---
 
 ## Guests, topics and collections

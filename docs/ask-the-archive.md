@@ -12,7 +12,7 @@ Ask the Archive answers questions using only what was actually said in the conve
 
 Because every source is a retrieval record rather than something the model produced, a citation cannot be hallucinated. The worst failure mode is a weak answer, not a fabricated one.
 
-**An episode is only answerable once it has a transcript.** A published conversation with no transcript is invisible to Ask. See [admin-guide.md](admin-guide.md#transcripts).
+**An episode is only answerable once it has a transcript.** A published conversation with no transcript is invisible to Ask. See [admin-guide.md](admin-guide.md#transcripts), or seed the whole archive from YouTube captions with [`pnpm captions:pull`](admin-guide.md#seeding-transcripts-from-youtube-captions).
 
 ## Modes
 
