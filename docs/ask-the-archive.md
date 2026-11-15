@@ -26,6 +26,15 @@ Because every source is a retrieval record rather than something the model produ
 
 Live mode settings: `AI_PROVIDER_BASE_URL`, `AI_PROVIDER_AGENT_ID`, `AI_PROVIDER_TIMEOUT_MS` (default 25 s). If the provider times out or fails, the request falls back to returning the retrieved sources rather than failing outright.
 
+### Where the key goes
+
+| How you run it                    | File                                           |
+| --------------------------------- | ---------------------------------------------- |
+| `pnpm dev` / a direct Node deploy | `apps/api/.env` (copy `apps/api/.env.example`) |
+| `docker compose` preview          | `.env` in the repository root, read by Compose |
+
+Both are gitignored. Set `AI_PROVIDER=mindstudio` alongside the key — the key on its own changes nothing. After editing the root `.env`, apply it with `docker compose up -d api`.
+
 ## Quotas
 
 Limits are per day, defined in `packages/contracts/src/ask.ts` rather than in environment variables, so the public site and the API never disagree about what a visitor is entitled to.

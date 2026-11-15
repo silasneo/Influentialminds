@@ -46,9 +46,11 @@ const envSchema = z.object({
    * labelled development results. `disabled` turns Ask the Archive off.
    */
   AI_PROVIDER: z.enum(["mindstudio", "mock", "disabled"]).default("disabled"),
-  AI_PROVIDER_API_KEY: z.string().optional(),
-  AI_PROVIDER_BASE_URL: z.string().url().default("https://api.mindstudio.ai"),
-  AI_PROVIDER_AGENT_ID: z.string().optional(),
+  AI_PROVIDER_API_KEY: optional(z.string().optional()),
+  AI_PROVIDER_BASE_URL: optional(
+    z.string().url().default("https://api.mindstudio.ai")
+  ),
+  AI_PROVIDER_AGENT_ID: optional(z.string().optional()),
   AI_PROVIDER_TIMEOUT_MS: z.coerce
     .number()
     .int()

@@ -62,7 +62,12 @@ services:
       AUTH_SECRET: local-development-secret-not-for-deployment-32
       AUTH_COOKIE_SECURE: "false"
       IP_HASH_SALT: local-development-salt
-      AI_PROVIDER: mock
+      # Ask the Archive stays on mock answers unless a real provider is
+      # configured in the root .env file.
+      AI_PROVIDER: ${AI_PROVIDER:-mock}
+      AI_PROVIDER_API_KEY: ${AI_PROVIDER_API_KEY:-}
+      AI_PROVIDER_BASE_URL: ${AI_PROVIDER_BASE_URL:-https://api.mindstudio.ai}
+      AI_PROVIDER_AGENT_ID: ${AI_PROVIDER_AGENT_ID:-}
       # Email stays off unless a Brevo key is supplied in the root .env file.
       EMAIL_PROVIDER: ${EMAIL_PROVIDER:-disabled}
       BREVO_API_KEY: ${BREVO_API_KEY:-}

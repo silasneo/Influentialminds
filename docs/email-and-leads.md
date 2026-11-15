@@ -37,6 +37,17 @@ than silently dropping every email.
 Contacts are written with the Brevo default attributes `FNAME` and `LNAME`,
 split from the single name field on the form. No custom attributes are required.
 
+### Where the key goes
+
+| How you run it                    | File                                           |
+| --------------------------------- | ---------------------------------------------- |
+| `pnpm dev` / a direct Node deploy | `apps/api/.env` (copy `apps/api/.env.example`) |
+| `docker compose` preview          | `.env` in the repository root, read by Compose |
+
+Both are gitignored, and `BREVO_API_KEY` must never be committed — in CI and
+hosted environments supply it as a secret. After editing the root `.env`, apply
+it with `docker compose up -d api`.
+
 ## Behaviour
 
 - **The lead is saved first.** Email delivery happens after the database write,
