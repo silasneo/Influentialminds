@@ -58,7 +58,7 @@ Green is untouched. Only the blue box is new work.
 
 An earlier draft paired a hosted Google model with a local fallback. That design
 had a trap: **vectors from different models are not comparable.** A 768-dim
-Gemini vector and a 384-dim MiniLM vector occupy unrelated spaces, so a cosine
+Gemini vector and a 384-dim local vector occupy unrelated spaces, so a cosine
 between them is noise. Supporting both meant indexing every passage twice and
 routing queries to the matching index — real complexity, for a corpus of a few
 hundred passages.
@@ -79,35 +79,52 @@ most sensitive data the site handles, and keeping them in-process is consistent
 with the stated position in `docs/roadmap.md` that no third-party scripts run on
 the public site.
 
-**The honest cost:** `all-MiniLM-L6-v2` is a 2021-era model and measurably weaker
-than current hosted embeddings on paraphrase recall. For a ten-episode archive of
-conversational English, that gap is small — and the hybrid design in §6.3 keeps
-the lexical scorer alongside it, so a weaker vector arm degrades ranking rather
-than breaking it. If the archive grows to the point where recall is the
-bottleneck, swapping the model is a config change (§7), not a redesign.
+**The honest cost:** a small local model is weaker than a frontier hosted one on
+long-tail paraphrase. For a ten-episode archive of conversational English the gap
+is modest, and the hybrid design in §6.3 keeps the lexical scorer alongside it, so
+a weaker vector arm degrades ranking rather than breaking it. If the archive grows
+to the point where recall is the bottleneck, swapping the model is a config change
+(§7), not a redesign.
 
 ## 4. Model
 
-**`Xenova/all-MiniLM-L6-v2`**, 384 dimensions, via `@huggingface/transformers`
+**`Xenova/bge-small-en-v1.5`**, 384 dimensions, via `@huggingface/transformers`
 (the maintained successor to `@xenova/transformers`), running on
 `onnxruntime-node` inside the existing Node 22 container (`apps/api/Dockerfile:4`).
 
-| Property            | Value               | Consequence                             |
-| ------------------- | ------------------- | --------------------------------------- |
-| Dimensions          | 384                 | 1.5 KB per vector                       |
-| **Max sequence**    | **256 word-pieces** | **Hard cap on passage length — see §5** |
-| Weights (fp32 ONNX) | ~90 MB              | Baked into the image                    |
-| Query latency       | ~5–15 ms CPU        | Invisible next to the LLM call          |
-| Language            | English only        | Matches the archive                     |
+| Property         | Value           | Consequence                             |
+| ---------------- | --------------- | --------------------------------------- |
+| Dimensions       | 384             | 1.5 KB per vector                       |
+| Max sequence     | 512 word-pieces | Comfortably above our passage size (§5) |
+| Parameters       | ~33 M           | ~130 MB fp32 ONNX, baked into the image |
+| Query latency    | ~10–20 ms CPU   | Invisible next to the LLM call          |
+| Language         | English only    | Matches the archive                     |
+| **Query prefix** | **required**    | **Asymmetric — see below**              |
 
-The 256-token ceiling is the one constraint that shapes the data model. Anything
-longer is **silently truncated**, not rejected — a passage whose second half is
-never embedded would be invisible to search with no error anywhere. Passage size
-is therefore a correctness concern, not a tuning preference.
+**Why not a newer BGE.** The later releases in the family are not in the same
+size class: `bge-m3` is ~570 M parameters and multilingual, and `bge-en-icl` and
+`bge-multilingual-gemma2` are LLM-based at several billion. None is viable
+in-process on a shared CPU container, and all are far beyond what a ten-episode
+English archive needs. `bge-small-en-v1.5` remains the strongest option in the
+small class and comfortably outperforms `all-MiniLM-L6-v2`, which it replaces
+here, at the same 384 dimensions — so vector storage, cache size and scan cost
+are all unchanged.
 
-`bge-small-en-v1.5` (also 384-dim, 512-token window, stronger on retrieval
-benchmarks) is a drop-in alternative if quality proves insufficient. Keeping the
-model id in config means that swap costs a reindex, nothing more.
+**BGE is asymmetric**, and this is easy to get wrong. Documents are embedded
+bare, but queries must be prefixed with:
+
+```
+Represent this sentence for searching relevant passages:
+```
+
+Omitting it does not fail — it quietly costs several points of recall, which is
+exactly the kind of regression that never produces an error and is never noticed.
+This is why `embed()` takes a `kind` argument (§6.1) rather than inferring one,
+and why the prefix is asserted in tests rather than left as a convention.
+
+The 512-token window means passage size is now driven by citation precision
+rather than by a model limit: `bge-base-en-v1.5` (768-dim) is a drop-in upgrade if
+quality proves insufficient, costing a reindex and double the vector storage.
 
 ## 5. Data model
 
@@ -357,10 +374,16 @@ built and the thresholds are tuned against real questions.
 
 ## 12. Open questions
 
-1. **Transcript source.** The archive currently has **0 transcript segments**.
-   Nothing here is testable, and Ask returns nothing today regardless of this
-   work. YouTube auto-captions are the obvious seed, subject to editorial review.
-   This is the real blocker for SOW item 8 and should be resolved first.
+1. ~~**Transcript source.**~~ **Resolved.** All ten published conversations now
+   carry YouTube auto-captions, pulled with `pnpm captions:pull` — 15,270
+   segments. Ask returns real citations and timecodes today, so this work is now
+   testable against real data and SOW item 8 is no longer blocked on content.
+   Captions remain unpunctuated and unattributed, so editorial review still
+   improves displayed excerpts; it is no longer a prerequisite.
+   The measured behaviour supports the case for this spec: because raw cues are
+   3–6 words, excerpts read as fragments, and the lexical arm returns obvious
+   noise on common words (a question about urbanisation matched "a change in a
+   target"). Passage merging (§5) and semantic ranking (§6) address exactly these.
 2. **Prose provider.** This spec assumes MindStudio stays as written in the SOW.
    Retrieval and prose generation are fully independent choices.
 3. **Scope.** This is retrieval quality work, not one of the ten priced
