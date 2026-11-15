@@ -132,6 +132,7 @@ Content is limited to what is verifiable from the published YouTube playlist —
 | [docs/api.md](docs/api.md)                         | Every `/api/v1` endpoint                                      |
 | [docs/admin-guide.md](docs/admin-guide.md)         | Day-to-day editorial workflow, transcripts, CSV export        |
 | [docs/ask-the-archive.md](docs/ask-the-archive.md) | Retrieval, grounding rules, providers, quotas                 |
+| [docs/email-and-leads.md](docs/email-and-leads.md) | Brevo transactional email and contact-list sync               |
 | [docs/qa-checklist.md](docs/qa-checklist.md)       | Pre-launch verification                                       |
 | [docs/roadmap.md](docs/roadmap.md)                 | Deliberately deferred to V2                                   |
 

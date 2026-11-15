@@ -1,6 +1,17 @@
 import { z } from "zod";
 
 /**
+ * `.env` files leave unused optional settings present but blank, so an empty
+ * string has to mean "unset" rather than failing validation at boot.
+ */
+const optional = <T extends z.ZodTypeAny>(schema: T) =>
+  z.preprocess(
+    value =>
+      typeof value === "string" && value.trim() === "" ? undefined : value,
+    schema
+  );
+
+/**
  * Every runtime setting the API needs. Parsed once at boot so a misconfigured
  * deployment fails fast instead of silently degrading.
  */
@@ -48,6 +59,27 @@ const envSchema = z.object({
   AI_MIN_SCORE: z.coerce.number().min(0).max(1).default(0.12),
   AI_MAX_SOURCES: z.coerce.number().int().min(1).max(12).default(5),
 
+  /**
+   * `brevo` delivers the lead magnet by transactional email and syncs the
+   * contact list. `disabled` captures leads without any outbound call.
+   */
+  EMAIL_PROVIDER: z.enum(["brevo", "disabled"]).default("disabled"),
+  BREVO_API_KEY: optional(z.string().optional()),
+  BREVO_BASE_URL: optional(
+    z.string().url().default("https://api.brevo.com/v3")
+  ),
+  /** Must be a sender verified in Brevo, otherwise every send is rejected. */
+  BREVO_SENDER_EMAIL: optional(z.string().email().optional()),
+  BREVO_SENDER_NAME: optional(z.string().default("Influential Minds")),
+  BREVO_REPLY_TO_EMAIL: optional(z.string().email().optional()),
+  /** Brevo list the captured contact is added to. Omit to skip list sync. */
+  BREVO_LIST_ID: optional(z.coerce.number().int().positive().optional()),
+  /** Optional Brevo template; when unset the API sends its own HTML. */
+  BREVO_TEMPLATE_ID: optional(z.coerce.number().int().positive().optional()),
+  BREVO_TIMEOUT_MS: optional(
+    z.coerce.number().int().min(1000).max(60000).default(10000)
+  ),
+
   /** Local disk storage root for the media library in self-hosted deployments. */
   STORAGE_DRIVER: z.enum(["local"]).default("local"),
   STORAGE_LOCAL_ROOT: z.string().default("storage"),
@@ -72,6 +104,15 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
   const value = parsed.data;
   if (value.AI_PROVIDER === "mindstudio" && !value.AI_PROVIDER_API_KEY) {
     throw new Error("AI_PROVIDER=mindstudio requires AI_PROVIDER_API_KEY");
+  }
+  if (value.EMAIL_PROVIDER === "brevo") {
+    const missing = [
+      !value.BREVO_API_KEY && "BREVO_API_KEY",
+      !value.BREVO_SENDER_EMAIL && "BREVO_SENDER_EMAIL",
+    ].filter((entry): entry is string => Boolean(entry));
+    if (missing.length > 0) {
+      throw new Error(`EMAIL_PROVIDER=brevo requires ${missing.join(" and ")}`);
+    }
   }
 
   return {

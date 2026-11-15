@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  Inject,
   Injectable,
   NotFoundException,
 } from "@nestjs/common";
@@ -16,10 +17,16 @@ import type {
 import { PrismaService } from "../prisma/prisma.module";
 import { mapLead, mapLeadMagnet } from "../common/mappers";
 import { paginate, skipTake } from "../common/pagination";
+import { CONFIG_TOKEN, type AppConfig } from "../config/configuration";
+import { MAIL_PROVIDER, type MailProvider } from "../mail/mail.provider";
 
 @Injectable()
 export class LeadsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    @Inject(MAIL_PROVIDER) private readonly mail: MailProvider,
+    @Inject(CONFIG_TOKEN) private readonly config: AppConfig
+  ) {}
 
   async getActiveLeadMagnet(): Promise<LeadMagnet | null> {
     const row = await this.prisma.leadMagnet.findFirst({
@@ -62,6 +69,7 @@ export class LeadsService {
           leadMagnetId: leadMagnet?.id ?? existing.leadMagnetId,
         },
       });
+      await this.deliver(input, leadMagnet);
       return {
         created: false,
         downloadUrl: leadMagnet?.fileUrl ?? null,
@@ -81,6 +89,8 @@ export class LeadsService {
       },
     });
 
+    await this.deliver(input, leadMagnet);
+
     return {
       created: true,
       downloadUrl: leadMagnet?.fileUrl ?? null,
@@ -89,6 +99,41 @@ export class LeadsService {
         ? "You are in. Your download is ready."
         : "You are in. We will email the next conversation.",
     };
+  }
+
+  /**
+   * Emails the asset and syncs the contact list. The lead row is already
+   * committed, so delivery failures are logged by the provider and never
+   * surface to the visitor.
+   */
+  private async deliver(
+    input: LeadSubmission,
+    leadMagnet: LeadMagnet | null
+  ): Promise<void> {
+    if (!this.mail.enabled) return;
+    await this.mail.deliverLeadMagnet(
+      {
+        name: input.name,
+        email: input.email,
+        consent: input.consent,
+        sourcePage: input.sourcePage ?? null,
+      },
+      leadMagnet
+        ? {
+            title: leadMagnet.title,
+            description: leadMagnet.description,
+            downloadUrl: this.absoluteUrl(leadMagnet.fileUrl),
+            fileName: leadMagnet.fileName,
+          }
+        : null
+    );
+  }
+
+  /** Email clients cannot follow the site-relative paths stored on a magnet. */
+  private absoluteUrl(url: string | null): string | null {
+    if (!url) return null;
+    if (/^https?:\/\//i.test(url)) return url;
+    return `${this.config.API_URL.replace(/\/$/, "")}/${url.replace(/^\//, "")}`;
   }
 
   /* ------------------------------ admin surface ----------------------------- */

@@ -63,6 +63,15 @@ services:
       AUTH_COOKIE_SECURE: "false"
       IP_HASH_SALT: local-development-salt
       AI_PROVIDER: mock
+      # Email stays off unless a Brevo key is supplied in the root .env file.
+      EMAIL_PROVIDER: ${EMAIL_PROVIDER:-disabled}
+      BREVO_API_KEY: ${BREVO_API_KEY:-}
+      BREVO_BASE_URL: ${BREVO_BASE_URL:-https://api.brevo.com/v3}
+      BREVO_SENDER_EMAIL: ${BREVO_SENDER_EMAIL:-}
+      BREVO_SENDER_NAME: ${BREVO_SENDER_NAME:-Influential Minds}
+      BREVO_REPLY_TO_EMAIL: ${BREVO_REPLY_TO_EMAIL:-}
+      BREVO_LIST_ID: ${BREVO_LIST_ID:-}
+      BREVO_TEMPLATE_ID: ${BREVO_TEMPLATE_ID:-}
       STORAGE_LOCAL_ROOT: storage
       SEED_ADMIN_EMAIL: admin@influentialminds.local
       SEED_ADMIN_PASSWORD: ChangeMe123!

@@ -103,6 +103,9 @@ Notes on the data:
 - A repeat submission of the same email for the same resource does not create a duplicate, and the visitor still receives the download.
 - A hidden honeypot field silently discards bot submissions.
 - Treat the export as personal data: keep it inside your email platform and delete local copies.
+- If Brevo is configured, the download is emailed automatically and the contact
+  is added to your Brevo list; otherwise the CSV export is the only route out.
+  See [email-and-leads.md](email-and-leads.md).
 
 ---
 

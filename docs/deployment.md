@@ -95,6 +95,10 @@ Production checklist:
 - `IP_HASH_SALT` — a unique random value, so stored rate-limit keys are not reversible
 - `DATABASE_URL` — point at the production database
 - Persist `STORAGE_LOCAL_ROOT` on a real volume, not ephemeral container storage
+- `API_URL` — the real public API origin; lead-magnet email links are built from it
+- `EMAIL_PROVIDER=brevo` plus `BREVO_API_KEY` (a secret) and a verified
+  `BREVO_SENDER_EMAIL` if subscribers should be emailed their download — see
+  [email-and-leads.md](email-and-leads.md). Leave it `disabled` to keep using CSV export.
 
 Run the API behind TLS. It sets `trust proxy`, so a standard reverse proxy forwarding `X-Forwarded-*` is enough.
 
