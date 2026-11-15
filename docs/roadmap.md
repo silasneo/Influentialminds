@@ -12,6 +12,8 @@ The Ask quota already distinguishes `ANONYMOUS`, `REGISTERED` and `SUBSCRIBER` t
 
 Archive search is a straightforward database match across titles, summaries and descriptions. It is predictable and fast at the current archive size. Worth revisiting when the archive is large enough that relevance ranking matters: full-text indexing, typo tolerance, facet counts, or semantic search over the same transcript embeddings Ask already uses.
 
+Ask retrieval itself is lexical today. [`specs/semantic-retrieval.md`](specs/semantic-retrieval.md) proposes replacing it with hybrid vector and keyword search, which would also give archive search an embedding index to reuse.
+
 ### Scheduled publishing
 
 Status changes are manual. A `publishAt` field plus a worker that promotes `IN_REVIEW` to `PUBLISHED` at the right moment would let the editor queue a season in advance.
