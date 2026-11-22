@@ -1,0 +1,117 @@
+name: influential-minds
+
+services:
+  db:
+    image: mysql:8.4
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?Set a production root password}
+      MYSQL_DATABASE: influential_minds
+      MYSQL_USER: influential
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?Set a production database password}
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    volumes:
+      - db-data:/var/lib/mysql
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          'MYSQL_PWD="$${MYSQL_ROOT_PASSWORD}" mysql -h 127.0.0.1 -uroot -e ''SELECT 1'' >/dev/null',
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 45s
+
+  api:
+    image: ${API_IMAGE:?Set the release API image}
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: "4000"
+      API_URL: https://${SITE_HOST:?Set the public hostname}
+      DATABASE_URL: mysql://influential:${MYSQL_PASSWORD:?}@db:3306/influential_minds
+      CORS_ORIGINS: https://${SITE_HOST:?}
+      AUTH_SECRET: ${AUTH_SECRET:?Set a unique production auth secret}
+      AUTH_COOKIE_SECURE: "true"
+      IP_HASH_SALT: ${IP_HASH_SALT:?Set a unique production IP salt}
+      AI_PROVIDER: ${AI_PROVIDER:-mock}
+      AI_PROVIDER_API_KEY: ${AI_PROVIDER_API_KEY:-}
+      AI_PROVIDER_BASE_URL: ${AI_PROVIDER_BASE_URL:-https://api.mindstudio.ai}
+      AI_PROVIDER_AGENT_ID: ${AI_PROVIDER_AGENT_ID:-}
+      EMAIL_PROVIDER: ${EMAIL_PROVIDER:-disabled}
+      BREVO_API_KEY: ${BREVO_API_KEY:-}
+      BREVO_BASE_URL: ${BREVO_BASE_URL:-https://api.brevo.com/v3}
+      BREVO_SENDER_EMAIL: ${BREVO_SENDER_EMAIL:-}
+      BREVO_SENDER_NAME: ${BREVO_SENDER_NAME:-Influential Minds}
+      BREVO_REPLY_TO_EMAIL: ${BREVO_REPLY_TO_EMAIL:-}
+      BREVO_LIST_ID: ${BREVO_LIST_ID:-}
+      BREVO_TEMPLATE_ID: ${BREVO_TEMPLATE_ID:-}
+      STORAGE_LOCAL_ROOT: storage
+    volumes:
+      - media:/repo/apps/api/storage
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:4000/api/v1/site/settings').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+      start_period: 45s
+
+  web:
+    image: ${WEB_IMAGE:?Set the release web image}
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      API_INTERNAL_URL: http://api:4000
+      NEXT_PUBLIC_API_URL: https://${SITE_HOST:?}
+      NEXT_PUBLIC_SITE_URL: https://${SITE_HOST:?}
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:3000/').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 15s
+      timeout: 10s
+      retries: 15
+      start_period: 30s
+
+  proxy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    depends_on:
+      web:
+        condition: service_healthy
+    environment:
+      SITE_HOST: ${SITE_HOST:?}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+
+volumes:
+  db-data:
+    name: influential-minds-db
+  media:
+    name: influential-minds-media
+  caddy-data:
+    name: influential-minds-caddy-data
+  caddy-config:
+    name: influential-minds-caddy-config

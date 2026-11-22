@@ -126,7 +126,7 @@ a:focus-visible {
   object-fit: contain;
 }
 .hero-brand {
-  display: flex;
+  display: none;
   align-items: center;
   gap: 12px;
   margin-bottom: 15px;

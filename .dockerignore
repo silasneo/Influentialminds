@@ -13,3 +13,6 @@ docs
 .env.local
 **/.env
 **/.env.local
+**/.env.*
+!**/.env.example
+*.private.clixml
