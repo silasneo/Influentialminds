@@ -54,7 +54,7 @@ Then seed once, to create site settings, the verified starting content and the f
 SEED_ADMIN_EMAIL=you@example.com SEED_ADMIN_PASSWORD='a-strong-password' pnpm db:seed
 ```
 
-The seed is idempotent: re-running it updates the seeded records instead of duplicating them.
+The seed is idempotent: existing Site settings and episode fields are preserved on re-runs. The placeholder topic is assigned only when an episode is first created, so startup does not undo editorial topic assignments or descriptions.
 
 ### Schema changes
 

@@ -216,8 +216,13 @@ async function main(): Promise<void> {
 
     const episode = await prisma.episode.upsert({
       where: { slug },
-      create: { slug, ...episodeData },
-      update: episodeData,
+      create: {
+        slug,
+        ...episodeData,
+        topics: { create: { topicId: topic.id } },
+      },
+      // Preserve descriptions, status and topic choices made by editors.
+      update: {},
     });
     episodeIds.push(episode.id);
 
@@ -226,14 +231,6 @@ async function main(): Promise<void> {
         episodeId_guestId: { episodeId: episode.id, guestId: guest.id },
       },
       create: { episodeId: episode.id, guestId: guest.id, sortOrder: 0 },
-      update: {},
-    });
-
-    await prisma.episodeTopic.upsert({
-      where: {
-        episodeId_topicId: { episodeId: episode.id, topicId: topic.id },
-      },
-      create: { episodeId: episode.id, topicId: topic.id },
       update: {},
     });
   }
