@@ -1692,6 +1692,18 @@ h3 em {
     transition-duration: 0.01ms !important;
   }
 }
+@media (min-width: 901px) {
+  .hero {
+    min-height: clamp(760px, 92vh, 900px);
+    height: auto;
+  }
+  .hero-inner {
+    min-height: inherit;
+  }
+  .hero h1 {
+    font-size: clamp(72px, 8vw, 120px);
+  }
+}
 @media (max-width: 900px) {
   .desktop-links {
     display: none;
