@@ -1,4 +1,5 @@
 import type { SiteSettings } from "@influential-minds/contracts";
+import { DEFAULT_HOST_PROFILE } from "@influential-minds/contracts";
 import { api } from "./api";
 
 /**
@@ -14,12 +15,8 @@ export const FALLBACK_SETTINGS: SiteSettings = {
   heroBody:
     "An editorial archive of long-form interviews, indexed so you can find the exact moment an idea was argued.",
   heroImageUrl: "/assets/hero.png",
-  hostName: "Lawrence",
-  hostRole: "Host",
-  hostPortraitUrl: "/assets/HostDrJones.png",
-  hostBio: "Pending editorial review.",
+  ...DEFAULT_HOST_PROFILE,
   hostQuote: null,
-  hostLongBio: null,
   youtubePlaylistUrl: null,
   newsletterHeading: "Join the room",
   newsletterBody: "Occasional dispatches when a new conversation is published.",

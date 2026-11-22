@@ -132,4 +132,6 @@ Notes on the data:
 
 **Site settings** controls copy that used to be hardcoded: the site title and tagline, hero text and image, host name, role, portrait, short and long biography and pull quote, newsletter heading and body, the meta description, and the YouTube playlist link.
 
+The host's **short bio** appears on the homepage; the **long bio** appears on About. Separate long-bio paragraphs with a blank line. The supplied Lawrence Jones headshot is at `/assets/Lawrence-Jones.webp`; About displays it at 160 pixels wide without enlarging the source image.
+
 The **Ask the Archive** section holds the suggested questions shown as prompt chips, one per line, up to twelve. Good suggestions are specific and answerable from the archive — "What did Rana Foroohar say about supply chains?" works better than "Tell me about the economy."

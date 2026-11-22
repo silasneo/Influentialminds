@@ -57,14 +57,16 @@ export default async function AboutPage() {
         <p>{settings.tagline}</p>
       </div>
 
-      <section className="about-section" style={{ borderTop: "0" }}>
+      <section className="about-section about-page-bio">
         <div className="about-layout">
           <div>
-            <div className="about-portrait-wrap" style={{ marginTop: 0 }}>
+            <div className="about-portrait-wrap">
               <img
                 className="about-portrait"
                 src={settings.hostPortraitUrl}
                 alt={`Portrait of ${settings.hostName}`}
+                width={160}
+                height={160}
               />
             </div>
             {settings.hostQuote ? (
@@ -72,9 +74,14 @@ export default async function AboutPage() {
             ) : null}
           </div>
           <div>
-            <p className="about-body">
-              {settings.hostLongBio ?? settings.hostBio}
-            </p>
+            {(settings.hostLongBio ?? settings.hostBio)
+              .split(/\n\s*\n/)
+              .filter(paragraph => paragraph.trim())
+              .map((paragraph, index) => (
+                <p className="about-body" key={index}>
+                  {paragraph}
+                </p>
+              ))}
             {settings.youtubePlaylistUrl ? (
               <a
                 className="text-link text-link--light"

@@ -1,6 +1,6 @@
 /**
- * Seeds the database with the only episode metadata that has been verified
- * against the public YouTube playlist (see `youtube_playlist_findings.md`).
+ * Seeds verified episode metadata from the public YouTube playlist (see
+ * `youtube_playlist_findings.md`) and host copy supplied by the site owner.
  *
  * Nothing here is invented. Where a fact has not been confirmed — biographies,
  * recording dates, topic taxonomy — the record carries an explicit
@@ -10,6 +10,7 @@
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import {
+  DEFAULT_HOST_PROFILE,
   slugify,
   youTubeThumbnailUrl,
   youTubeWatchUrl,
@@ -107,12 +108,8 @@ async function seedSiteSettings(): Promise<void> {
     heroBody:
       "Long-form conversations with researchers, founders and writers about the ideas changing how we live and work. Every answer in this archive is drawn from something a guest actually said on the record.",
     heroImageUrl: "/assets/hero.png",
-    hostName: "Lawrence",
-    hostRole: "Host",
-    hostPortraitUrl: "/assets/HostDrJones.png",
-    hostBio: PENDING,
+    ...DEFAULT_HOST_PROFILE,
     hostQuote: null,
-    hostLongBio: PENDING,
     youtubePlaylistUrl: `https://www.youtube.com/playlist?list=${PLAYLIST_ID}`,
     newsletterHeading: "Join the room",
     newsletterBody:
@@ -129,7 +126,8 @@ async function seedSiteSettings(): Promise<void> {
   await prisma.siteSetting.upsert({
     where: { id: "site" },
     create: { id: "site", ...data },
-    update: data,
+    // Site settings are CMS-owned once created, including the host biography.
+    update: {},
   });
 }
 

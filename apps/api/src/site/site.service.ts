@@ -1,5 +1,6 @@
 import { Injectable } from "@nestjs/common";
 import { Prisma } from "@prisma/client";
+import { DEFAULT_HOST_PROFILE } from "@influential-minds/contracts";
 import type {
   EditableSiteSettings,
   HomepagePayload,
@@ -25,12 +26,8 @@ const DEFAULT_SETTINGS = {
   heroBody:
     "Long-form conversations with researchers, founders and writers about the ideas changing how we live and work.",
   heroImageUrl: "/assets/hero.png",
-  hostName: "Lawrence",
-  hostRole: "Host",
-  hostPortraitUrl: "/assets/HostDrJones.png",
-  hostBio: "Pending editorial review.",
+  ...DEFAULT_HOST_PROFILE,
   hostQuote: null,
-  hostLongBio: null,
   youtubePlaylistUrl: null,
   newsletterHeading: "Join the room",
   newsletterBody:
