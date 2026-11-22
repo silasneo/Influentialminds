@@ -110,6 +110,8 @@ Because upload replaces by episode and language, re-running is safe and repeatab
 
 For bundled files in `apps\web\public\assets`, enter a site-relative URL such as `/assets/drann2.jpeg`. Match the filename's capitalization and extension exactly; `.jpg` and `.jpeg` are different URLs. These files are baked into the Docker web image, so adding or replacing one requires `docker compose build web`, followed by `docker compose up -d --no-deps web`. Uploading through **Media** instead stores the file in persistent API storage without a web rebuild.
 
+The bundled Rana Foroohar and Michael Spence portraits are Creative Commons works. Their cropped WebP versions retain their respective CC BY-SA licenses; `assets/guests/credits.json` records the authors, sources, licenses and changes. Keep this manifest and the visible credits on guest cards and profiles consistent when replacing or renaming either image.
+
 The upload size limit is `STORAGE_MAX_UPLOAD_MB` (25 MB by default).
 
 ---

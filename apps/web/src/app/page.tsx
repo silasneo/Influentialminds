@@ -16,6 +16,7 @@ import { EpisodeCard } from "@/components/EpisodeCard";
 import { AskPanel } from "@/components/AskPanel";
 import { LeadForm } from "@/components/LeadForm";
 import { EmptyState } from "@/components/EmptyState";
+import { GuestPhotoCredit } from "@/components/GuestPhotoCredit";
 
 export default async function HomePage() {
   let payload: HomepagePayload | null = null;
@@ -309,6 +310,7 @@ export default async function HomePage() {
                 )}
                 <h3>{guest.name}</h3>
                 <p>{guest.role ?? "Pending editorial review."}</p>
+                <GuestPhotoCredit headshotUrl={guest.headshotUrl} />
               </Link>
             ))}
           </div>

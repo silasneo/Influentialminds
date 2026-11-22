@@ -1,0 +1,18 @@
+[
+  {
+    "url": "/assets/guests/rana-foroohar.webp",
+    "author": "RaquelFlorez",
+    "source": "https://commons.wikimedia.org/wiki/File:Rana_Foroohar_1.jpg",
+    "license": "CC BY-SA 4.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/",
+    "changes": "Cropped, resized and converted to WebP."
+  },
+  {
+    "url": "/assets/guests/michael-spence.webp",
+    "author": "Niccolò Caranti",
+    "source": "https://commons.wikimedia.org/wiki/File:Michael_Spence_-_Trento_2013_01.JPG",
+    "license": "CC BY-SA 3.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0/",
+    "changes": "Cropped, resized, padded and converted to WebP."
+  }
+]

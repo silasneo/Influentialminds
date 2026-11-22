@@ -5,6 +5,7 @@ import { initials } from "@/lib/format";
 import { PageShell } from "@/components/PageShell";
 import { EmptyState } from "@/components/EmptyState";
 import { Pagination } from "@/components/Pagination";
+import { GuestPhotoCredit } from "@/components/GuestPhotoCredit";
 
 export const metadata: Metadata = {
   title: "People",
@@ -63,6 +64,7 @@ export default async function GuestsPage({ searchParams }: PageProps) {
                   {[guest.role, guest.company].filter(Boolean).join(", ") ||
                     "Pending editorial review."}
                 </p>
+                <GuestPhotoCredit headshotUrl={guest.headshotUrl} />
                 <div className="story-meta">
                   <span>
                     {guest.episodeCount} conversation

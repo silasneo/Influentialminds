@@ -6,6 +6,7 @@ import { initials, truncate } from "@/lib/format";
 import { PageShell } from "@/components/PageShell";
 import { EpisodeCard } from "@/components/EpisodeCard";
 import { EmptyState } from "@/components/EmptyState";
+import { GuestPhotoCredit } from "@/components/GuestPhotoCredit";
 
 interface PageProps {
   params: Promise<{ slug: string }>;
@@ -84,6 +85,7 @@ export default async function GuestPage({ params }: PageProps) {
               {[guest.role, guest.company].filter(Boolean).join(", ") ||
                 "Pending editorial review."}
             </p>
+            <GuestPhotoCredit headshotUrl={guest.headshotUrl} linked />
           </div>
         </div>
       </div>
