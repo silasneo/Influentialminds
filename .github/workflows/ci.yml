@@ -140,7 +140,20 @@ jobs:
         with:
           role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
           aws-region: ${{ vars.AWS_REGION }}
-          allowed-account-ids: ${{ vars.AWS_ACCOUNT_ID }}
+
+      - name: Verify the AWS deployment identity
+        if: vars.EC2_DEPLOY_ENABLED == 'true' || inputs.publish_only
+        env:
+          EXPECTED_ACCOUNT: ${{ vars.AWS_ACCOUNT_ID }}
+          EXPECTED_ROLE_ARN: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+        run: |
+          set -euo pipefail
+          account=$(aws sts get-caller-identity --query Account --output text)
+          arn=$(aws sts get-caller-identity --query Arn --output text)
+          role_name="${EXPECTED_ROLE_ARN##*/}"
+          [[ "$account" == "$EXPECTED_ACCOUNT" ]]
+          [[ "$arn" == arn:aws:sts::"$EXPECTED_ACCOUNT":assumed-role/"$role_name"/* ]]
+          echo "Verified the independent GitHub OIDC deployment role."
 
       - name: Log in to ECR
         if: vars.EC2_DEPLOY_ENABLED == 'true' || inputs.publish_only
@@ -154,7 +167,7 @@ jobs:
         with:
           context: .
           file: apps/api/Dockerfile
-          push: ${{ vars.EC2_DEPLOY_ENABLED == 'true' || inputs.publish_only }}
+          push: ${{ vars.EC2_DEPLOY_ENABLED == 'true' || inputs.publish_only == true }}
           tags: ${{ steps.ecr.outputs.registry || 'local' }}/influential-minds/api:${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
@@ -164,7 +177,7 @@ jobs:
         with:
           context: .
           file: apps/web/Dockerfile
-          push: ${{ vars.EC2_DEPLOY_ENABLED == 'true' || inputs.publish_only }}
+          push: ${{ vars.EC2_DEPLOY_ENABLED == 'true' || inputs.publish_only == true }}
           tags: ${{ steps.ecr.outputs.registry || 'local' }}/influential-minds/web:${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
@@ -178,7 +191,7 @@ jobs:
           ECR_REGISTRY: ${{ steps.ecr.outputs.registry }}
           DEPLOY_BUCKET: ${{ vars.EC2_DEPLOY_BUCKET }}
           INSTANCE_ID: ${{ vars.EC2_INSTANCE_ID }}
-          PUBLISH_ONLY: ${{ inputs.publish_only }}
+          PUBLISH_ONLY: ${{ inputs.publish_only == true }}
         run: |
           set -euo pipefail
           release_id="$GITHUB_SHA-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"

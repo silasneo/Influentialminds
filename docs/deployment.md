@@ -74,6 +74,13 @@ role can publish only the two ECR repositories, upload release bundles and
 invoke the `InfluentialMinds-Deploy` SSM document on the target instance.
 It cannot read the database backups or production secrets.
 
+For repositories using immutable OIDC subjects, obtain `sub_claim_prefix`
+from `gh api repos/OWNER/REPO/actions/oidc/customization/sub` and append
+`:environment:production` to form the exact trusted subject. A name-only
+`repo:OWNER/REPO:environment:production` subject will not match. Keep the
+immutable identity and environment restriction; do not broaden the trust
+to wildcard repositories.
+
 Set these repository variables:
 
 | Variable               | Value                                       |
@@ -95,6 +102,21 @@ applies migrations **without seeds**, and starts the new release. There is a
 brief maintenance window while the API/web containers restart. Production runs
 are serialized without cancelling an in-flight SSM deployment; reruns get new
 immutable image tags and release directories.
+
+### Removing bootstrap administrator access
+
+The initial AWS CLI identity is used only to provision infrastructure and
+transfer/restore the first private content snapshot. Actions assumes
+`InfluentialMindsGitHubDeployRole` through OIDC; EC2 uses
+`InfluentialMindsEc2Role` through its instance profile. Neither depends on
+the bootstrap user's access keys or its `AdministratorAccess` policy.
+
+After a **push-triggered `prod-deploy` run** successfully publishes images,
+deploys through SSM and passes HTTPS health checks, remove the bootstrap
+user's administrator policy and disable any bootstrap access keys that are
+no longer needed. Keep the GitHub OIDC provider/deployment role, EC2 instance
+profile, deployment bucket and SSM document. Retain a separate, secured AWS
+account-administration/recovery path for future infrastructure changes.
 
 `/opt/influential-minds/current` changes only after the release is healthy.
 Failures are reported through Actions/SSM, not hidden by automatic database
@@ -256,7 +278,8 @@ With that split, set `AUTH_COOKIE_DOMAIN=.influentialminds.com` so the admin ses
 2. **migrations** — start MySQL 8, apply the committed migrations, then assert with `prisma migrate diff --exit-code` that the migration history still reproduces `schema.prisma`. This catches a schema edit committed without its migration.
 3. **images** — `prod-deploy` only. Builds both release containers after the first two jobs pass, because the deployable artefact is the image, not the workspace build. A Dockerfile that breaks while `pnpm build` still succeeds is caught here rather than during a release.
 
-The old GitHub Pages workflow has been removed; the site is no longer static.
+GitHub Pages cannot host this application. Disable any legacy Pages workflow
+after the EC2 cutover; the production application is no longer static.
 
 ### Branches
 
