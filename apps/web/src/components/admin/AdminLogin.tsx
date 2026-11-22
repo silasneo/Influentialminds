@@ -27,7 +27,7 @@ export function AdminLogin() {
 
   return (
     <div className="admin-shell">
-      <form className="admin-panel" onSubmit={onSubmit}>
+      <form className="admin-panel admin-panel--login" onSubmit={onSubmit}>
         <h1>
           Editorial <em>console</em>
         </h1>

@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import type { AdminUser } from "@influential-minds/contracts";
 import { ADMIN_ROLES } from "@influential-minds/contracts";
 import { adminApi } from "@/lib/admin-client";
-import { errorMessage, Field, PanelError, Toolbar } from "./ui";
+import { AdminTable, errorMessage, Field, PanelError, Toolbar } from "./ui";
 import { formatDate } from "@/lib/format";
 
 const EMPTY = {
@@ -142,7 +142,7 @@ export function UsersPanel({ currentUserId }: { currentUserId: string }) {
         </Toolbar>
       </form>
 
-      <table className="admin-table">
+      <AdminTable label="Team members">
         <thead>
           <tr>
             <th>Name</th>
@@ -199,7 +199,7 @@ export function UsersPanel({ currentUserId }: { currentUserId: string }) {
             </tr>
           ))}
         </tbody>
-      </table>
+      </AdminTable>
     </div>
   );
 }

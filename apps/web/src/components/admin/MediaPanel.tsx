@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { MediaAsset } from "@influential-minds/contracts";
 import { adminApi } from "@/lib/admin-client";
-import { errorMessage, Field, PanelError, Toolbar } from "./ui";
+import { AdminTable, errorMessage, Field, PanelError, Toolbar } from "./ui";
 
 function sizeLabel(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
@@ -86,7 +86,7 @@ export function MediaPanel() {
         </Toolbar>
       </form>
 
-      <table className="admin-table">
+      <AdminTable label="Media library">
         <thead>
           <tr>
             <th>File</th>
@@ -133,7 +133,7 @@ export function MediaPanel() {
             ))
           )}
         </tbody>
-      </table>
+      </AdminTable>
     </div>
   );
 }

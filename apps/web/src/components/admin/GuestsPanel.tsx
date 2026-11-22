@@ -5,6 +5,7 @@ import type { Guest } from "@influential-minds/contracts";
 import { EDITORIAL_STATUSES } from "@influential-minds/contracts";
 import { adminApi } from "@/lib/admin-client";
 import {
+  AdminTable,
   errorMessage,
   Field,
   PanelError,
@@ -237,7 +238,7 @@ export function GuestsPanel() {
             />
           </Field>
 
-          <div style={{ display: "flex", gap: 12 }}>
+          <div className="admin-actions">
             <button
               type="submit"
               className="button button--cobalt"
@@ -256,7 +257,7 @@ export function GuestsPanel() {
         </form>
       ) : null}
 
-      <table className="admin-table">
+      <AdminTable label="Guests">
         <thead>
           <tr>
             <th>Name</th>
@@ -303,7 +304,7 @@ export function GuestsPanel() {
             ))
           )}
         </tbody>
-      </table>
+      </AdminTable>
     </div>
   );
 }

@@ -2,6 +2,8 @@
 
 The console lives at `/admin`. Sign in with the account created by `pnpm db:seed`, then change the password from **Team**.
 
+The console fills the available screen width. On smaller screens, tables scroll horizontally within their panels; forms and console navigation wrap to fit.
+
 ## Roles
 
 | Role             | Can do                                                                                                           |

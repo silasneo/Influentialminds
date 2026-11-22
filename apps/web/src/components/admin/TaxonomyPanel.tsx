@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import type { Collection, Topic } from "@influential-minds/contracts";
 import { adminApi } from "@/lib/admin-client";
-import { errorMessage, Field, PanelError, Toolbar } from "./ui";
+import { AdminTable, errorMessage, Field, PanelError, Toolbar } from "./ui";
 
 export function TaxonomyPanel() {
   const [topics, setTopics] = useState<Topic[]>([]);
@@ -159,7 +159,7 @@ export function TaxonomyPanel() {
             />
             <span>Feature on the homepage index</span>
           </label>
-          <div style={{ display: "flex", gap: 12 }}>
+          <div className="admin-actions">
             <button type="submit" className="button button--cobalt">
               {topicForm.id ? "Update topic" : "Add topic"}
             </button>
@@ -183,7 +183,7 @@ export function TaxonomyPanel() {
           </div>
         </form>
 
-        <table className="admin-table">
+        <AdminTable label="Topics">
           <thead>
             <tr>
               <th>Name</th>
@@ -240,7 +240,7 @@ export function TaxonomyPanel() {
               ))
             )}
           </tbody>
-        </table>
+        </AdminTable>
       </section>
 
       <section>
@@ -328,7 +328,7 @@ export function TaxonomyPanel() {
             Conversations are added to a collection from the conversation
             editor.
           </p>
-          <div style={{ display: "flex", gap: 12 }}>
+          <div className="admin-actions">
             <button type="submit" className="button button--cobalt">
               {collectionForm.id ? "Update collection" : "Add collection"}
             </button>
@@ -353,7 +353,7 @@ export function TaxonomyPanel() {
           </div>
         </form>
 
-        <table className="admin-table">
+        <AdminTable label="Collections">
           <thead>
             <tr>
               <th>Title</th>
@@ -415,7 +415,7 @@ export function TaxonomyPanel() {
               ))
             )}
           </tbody>
-        </table>
+        </AdminTable>
       </section>
     </div>
   );

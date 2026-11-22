@@ -92,33 +92,12 @@ export function AdminConsole() {
 
   return (
     <div className="admin-shell">
-      <header
-        style={{
-          display: "flex",
-          flexWrap: "wrap",
-          gap: 16,
-          alignItems: "baseline",
-          justifyContent: "space-between",
-          marginBottom: 28,
-        }}
-      >
+      <header className="admin-header">
         <div>
           <p className="eyebrow">Editorial console</p>
-          <h1
-            style={{ fontFamily: "var(--serif)", fontSize: 40, lineHeight: 1 }}
-          >
-            Influential Minds
-          </h1>
+          <h1>Influential Minds</h1>
         </div>
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 14,
-            fontSize: 13,
-            color: "var(--muted)",
-          }}
-        >
+        <div className="admin-session">
           <span>
             {user.name} · {user.role.replace("_", " ").toLowerCase()}
           </span>

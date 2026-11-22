@@ -1,6 +1,6 @@
 "use client";
 
-import type { ReactNode } from "react";
+import type { ComponentProps, ReactNode } from "react";
 
 export function Field({
   label,
@@ -24,6 +24,27 @@ export function Field({
 
 export function Toolbar({ children }: { children: ReactNode }) {
   return <div className="filter-bar">{children}</div>;
+}
+
+export function AdminTable({
+  label,
+  children,
+  style,
+  ...props
+}: ComponentProps<"table"> & { label: string }) {
+  return (
+    <div
+      className="admin-table-wrap"
+      role="region"
+      aria-label={label}
+      tabIndex={0}
+      style={style}
+    >
+      <table {...props} className="admin-table">
+        {children}
+      </table>
+    </div>
+  );
 }
 
 export function PanelError({ error }: { error: string | null }) {

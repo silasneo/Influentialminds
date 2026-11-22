@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import type { Lead, LeadMagnet } from "@influential-minds/contracts";
 import { adminApi } from "@/lib/admin-client";
-import { errorMessage, Field, PanelError, Toolbar } from "./ui";
+import { AdminTable, errorMessage, Field, PanelError, Toolbar } from "./ui";
 import { formatDate } from "@/lib/format";
 
 const EMPTY_MAGNET = {
@@ -86,7 +86,7 @@ export function LeadsPanel() {
           </button>
         </Toolbar>
 
-        <table className="admin-table">
+        <AdminTable label="Subscribers">
           <thead>
             <tr>
               <th>Email</th>
@@ -113,7 +113,7 @@ export function LeadsPanel() {
               ))
             )}
           </tbody>
-        </table>
+        </AdminTable>
       </section>
 
       <section>
@@ -191,7 +191,7 @@ export function LeadsPanel() {
             />
             <span>Offer this resource on the site</span>
           </label>
-          <div style={{ display: "flex", gap: 12 }}>
+          <div className="admin-actions">
             <button type="submit" className="button button--cobalt">
               {magnetForm.id ? "Update resource" : "Add resource"}
             </button>
@@ -207,7 +207,7 @@ export function LeadsPanel() {
           </div>
         </form>
 
-        <table className="admin-table">
+        <AdminTable label="Lead magnets">
           <thead>
             <tr>
               <th>Title</th>
@@ -266,7 +266,7 @@ export function LeadsPanel() {
               ))
             )}
           </tbody>
-        </table>
+        </AdminTable>
       </section>
     </div>
   );

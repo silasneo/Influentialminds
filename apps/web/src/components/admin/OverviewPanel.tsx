@@ -6,7 +6,7 @@ import type {
   AuditLogEntry,
 } from "@influential-minds/contracts";
 import { adminApi } from "@/lib/admin-client";
-import { errorMessage, PanelError } from "./ui";
+import { AdminTable, errorMessage, PanelError } from "./ui";
 
 export function OverviewPanel() {
   const [data, setData] = useState<AdminDashboard | null>(null);
@@ -82,7 +82,7 @@ export function OverviewPanel() {
       >
         Recent leads
       </h2>
-      <table className="admin-table" style={{ marginBottom: 38 }}>
+      <AdminTable label="Recent leads" style={{ marginBottom: 38 }}>
         <thead>
           <tr>
             <th>Name</th>
@@ -107,14 +107,14 @@ export function OverviewPanel() {
             ))
           )}
         </tbody>
-      </table>
+      </AdminTable>
 
       <h2
         style={{ fontSize: 22, textTransform: "uppercase", marginBottom: 16 }}
       >
         Activity
       </h2>
-      <table className="admin-table">
+      <AdminTable label="Activity">
         <thead>
           <tr>
             <th>When</th>
@@ -141,7 +141,7 @@ export function OverviewPanel() {
             ))
           )}
         </tbody>
-      </table>
+      </AdminTable>
     </div>
   );
 }

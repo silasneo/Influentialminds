@@ -10,7 +10,14 @@ import type {
 } from "@influential-minds/contracts";
 import { EDITORIAL_STATUSES } from "@influential-minds/contracts";
 import { adminApi } from "@/lib/admin-client";
-import { errorMessage, Field, PanelError, StatusPill, Toolbar } from "./ui";
+import {
+  AdminTable,
+  errorMessage,
+  Field,
+  PanelError,
+  StatusPill,
+  Toolbar,
+} from "./ui";
 import {
   EMPTY_FORM as EMPTY,
   toForm,
@@ -349,7 +356,7 @@ export function EpisodesPanel() {
                       updateQuote(index, { text: event.target.value })
                     }
                   />
-                  <div style={{ display: "flex", gap: 8 }}>
+                  <div className="admin-quote-fields">
                     <input
                       style={{ flex: 2 }}
                       placeholder="Attribution"
@@ -493,7 +500,7 @@ export function EpisodesPanel() {
             </Field>
           </div>
 
-          <div style={{ display: "flex", gap: 12, marginTop: 10 }}>
+          <div className="admin-actions" style={{ marginTop: 10 }}>
             <button
               type="submit"
               className="button button--cobalt"
@@ -539,7 +546,7 @@ export function EpisodesPanel() {
                   onChange={event => setTranscriptText(event.target.value)}
                 />
               </Field>
-              <div style={{ display: "flex", gap: 12 }}>
+              <div className="admin-actions">
                 <button
                   type="button"
                   className="button button--ghost"
@@ -569,7 +576,7 @@ export function EpisodesPanel() {
         </form>
       ) : null}
 
-      <table className="admin-table">
+      <AdminTable label="Conversations">
         <thead>
           <tr>
             <th>Title</th>
@@ -633,7 +640,7 @@ export function EpisodesPanel() {
             ))
           )}
         </tbody>
-      </table>
+      </AdminTable>
     </div>
   );
 }
