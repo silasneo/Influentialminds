@@ -4,6 +4,9 @@ The API and the web app deploy separately. The API needs a persistent filesystem
 
 ## Ubuntu EC2 with GitHub Actions
 
+Production site: <https://influentialminds.dreamhivellc.com>. Releases are cut
+from `prod-deploy`.
+
 Use `docker-compose.production.yml`, not the local preview file, on EC2.
 The production stack publishes only Caddy's ports 80/443; MySQL and the API stay
 on the Docker network. Caddy preserves `/api/v1` and `/media` prefixes, terminates
@@ -60,6 +63,18 @@ HTTPS, and redirects HTTP. The admin cookie is always secure.
    Delete temporary credential/configuration transfer objects and local
    plaintext copies after successful import.
 
+For this Windows bootstrap, the replacement admin credential is saved in the
+gitignored `.production-admin.private.clixml` file, encrypted for the Windows
+user/machine that performed the deployment. Retrieve it locally, not in chat:
+
+```powershell
+(Import-Clixml .\.production-admin.private.clixml).GetNetworkCredential().Password
+```
+
+The imported admin email remains `admin@influentialminds.local`; its old
+development password no longer works. Change its email/password in the admin
+Users panel after the first production login if needed.
+
 The deployment bundle contains Compose, `deploy/Caddyfile`, deployment scripts
 and `release.env` with SHA-tagged `API_IMAGE` and `WEB_IMAGE` ECR references.
 Releases live at `/opt/influential-minds/releases/<git-sha>-<run-id>-<attempt>`. Named database,
@@ -72,7 +87,9 @@ Configure the GitHub `production` environment to accept only `prod-deploy`;
 the AWS OIDC trust must match this repository and environment. The deployment
 role can publish only the two ECR repositories, upload release bundles and
 invoke the `InfluentialMinds-Deploy` SSM document on the target instance.
-It cannot read the database backups or production secrets.
+Its AWS policy does not grant direct reads of backups or secret storage.
+Deployment itself remains privileged access to this instance, so protect the
+release branch and repository account.
 
 For repositories using immutable OIDC subjects, obtain `sub_claim_prefix`
 from `gh api repos/OWNER/REPO/actions/oidc/customization/sub` and append
