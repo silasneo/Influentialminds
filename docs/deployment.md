@@ -36,6 +36,15 @@ HTTPS, and redirects HTTP. The admin cookie is always secure.
    Avoid CMS edits during export. Commit bundled assets such as portraits and
    the lead-magnet PDF separately; these are part of the web image, not the API
    media volume.
+   With the workflow available on `prod-deploy`, stage the first images and
+   bundle using Actions while automatic deployment is still disabled:
+
+   ```bash
+   gh workflow run ci.yml --ref prod-deploy -f publish_only=true
+   ```
+
+   This runs the same CI checks and uses the scoped OIDC role, but does not
+   start the application before the private content import.
 
 5. Transfer the export and initial configuration privately to EC2. Restore
    SQL only into an empty database, restore media into the persistent media
